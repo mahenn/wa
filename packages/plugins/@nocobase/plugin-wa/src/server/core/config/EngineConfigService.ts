@@ -1,0 +1,35 @@
+import { createLogger,Logger } from '@nocobase/logger';
+
+import { Config } from '@nocobase/core';
+
+import { parseBool } from '../../helpers';
+import { WAHAEngine } from '../../structures/enums.dto';
+import { getEngineName } from '../../version';
+
+
+export class EngineConfigService {
+  private logger: Logger;
+
+  constructor(protected configService: Config) {
+    this.logger =  createLogger({
+      name: 'EngineConfigService',
+      transports: ['console']
+    });
+  }
+
+  getDefaultEngineName(): WAHAEngine {
+    const value = getEngineName();
+    if (value in WAHAEngine) {
+      return WAHAEngine[value];
+    }
+    this.logger.warn(
+      `Unknown WhatsApp default engine WHATSAPP_DEFAULT_ENGINE=${value}. Using WEBJS`,
+    );
+    return WAHAEngine.WEBJS;
+  }
+
+  get shouldPrintQR(): boolean {
+    const value = process.env.WAHA_PRINT_QR || true;
+    return parseBool(value);
+  }
+}
