@@ -69,7 +69,7 @@ export class SessionManagerCore extends SessionManager {
     this.events = new EventEmitter();
     this.session = DefaultSessionStatus.STOPPED;
     this.sessionConfig = null;
-    //this.log.setContext(SessionManagerCore.name);
+    this.log.setContext(SessionManagerCore.name);
     const engineName = this.engineConfigService.getDefaultEngineName();
     this.EngineClass = this.getEngine(engineName);
     this.store = new LocalStoreCore(engineName.toLowerCase());

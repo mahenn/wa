@@ -1,0 +1,16 @@
+session get
+=================================
+data": {
+"name": "default",
+"status": "WORKING",
+"config": null,
+"me": {
+"id": "919082402383@c.us",
+"pushName": "mahendra nakar"
+},
+"engine": {
+"engine": "WEBJS",
+"WWebVersion": "2.3000.1019441298",
+"state": "CONNECTED"
+}
+}

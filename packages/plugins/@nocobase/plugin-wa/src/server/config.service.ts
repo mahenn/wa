@@ -6,13 +6,12 @@ import { WebhookConfig } from './structures/webhooks.config.dto';
 
 //@Injectable()
 export class WhatsappConfigService {
-  constructor(private readonly app: any) {
-    console.log(this.app.config);
+  constructor() {
   }
 
-  private get configService(): Configuration {
-    return this.app.config;
-  }
+  // private get configService(): Configuration {
+  //   return this.app.config;
+  // }
 
   get schema() {
     return process.env.WHATSAPP_API_SCHEMA || 'http';

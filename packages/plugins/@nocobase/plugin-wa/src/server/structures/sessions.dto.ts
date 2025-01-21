@@ -1,5 +1,4 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsDynamicObject } from '@waha/nestjs/validation/IsDynamicObject';
 import { Transform, Type } from 'class-transformer';
 import {
   IsArray,
@@ -96,7 +95,6 @@ export class SessionConfig {
       "Metadata for the session. You'll get 'metadata' in all webhooks.",
     required: false,
   })
-  @IsDynamicObject()
   @IsOptional()
   metadata?: Map<string, string>;
 
