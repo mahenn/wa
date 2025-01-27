@@ -45,8 +45,9 @@ export class LabelsController {
   async putChatLabels(ctx: Context, next: Next) {
 
     const { session, chatId } = ctx.action.params;
-    const request = ctx.request.body;
-    
+    //const request = ctx.request.body;
+    const request = ctx.request.body as { labels: string[] }; // Add type assertion
+
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {
       ctx.throw(404, `Session ${session} not found`);

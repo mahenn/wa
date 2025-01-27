@@ -1,9 +1,8 @@
 import { LoggerBuilder } from '../../utils/logging';
-import { createLogger,Logger } from '@nocobase/logger';
-
-
+//import { createLogger,Logger,LoggerOptions } from '@nocobase/logger';
 import { WebhookConfig } from '../../structures/webhooks.config.dto';
 import { WhatsappSession } from './session.abc';
+import { Logger } from 'pino';
 
 export abstract class WebhookSender {
   protected url: string;
@@ -15,6 +14,11 @@ export abstract class WebhookSender {
   ) {
     this.url = webhookConfig.url;
     this.logger = loggerBuilder.child({ name: WebhookSender.name });
+    // this.logger = createLogger({
+    //   name: WebhookSender.name ,
+    //   transport: 'console',
+    //   level: 'info'
+    // } as LoggerOptions);
   }
 
   abstract send(json);

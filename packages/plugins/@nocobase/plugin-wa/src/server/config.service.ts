@@ -1,11 +1,11 @@
 //import { Injectable } from '@nestjs/common';
-import { Configuration } from '@nocobase/server';
 import { WAHAEvents } from './structures/enums.dto';
 import { parseBool } from './helpers';
 import { WebhookConfig } from './structures/webhooks.config.dto';
 
 //@Injectable()
 export class WhatsappConfigService {
+  
   constructor() {
   }
 
@@ -85,16 +85,21 @@ export class WhatsappConfigService {
 
   private getWebhookEvents(): WAHAEvents[] {
     const value = process.env.WHATSAPP_HOOK_EVENTS || '';
-    return value ? value.split(',') : [];
+    //return value ? value.split(',') : [];
+    return value ? value.split(',').map(event => event as WAHAEvents) : [];
+
   }
 
   getSessionMongoUrl(): string | undefined {
     return process.env.WHATSAPP_SESSIONS_MONGO_URL || undefined;
   }
 
-  get(name: string, defaultValue: any = undefined): any {
-    return this.configService.get(name, defaultValue);
-  }
+  // get(name: string, defaultValue: any = undefined): any {
+  //   if (!this.configService) {
+  //     return defaultValue;
+  //   }
+  //   return this.configService.get(name, defaultValue);
+  // }
 
   getApiKey(): string | undefined {
     return process.env.WHATSAPP_API_KEY || '';
@@ -109,15 +114,18 @@ export class WhatsappConfigService {
   }
 
   getHealthMediaFilesThreshold(): number {
-    return process.env.WHATSAPP_HEALTH_MEDIA_FILES_THRESHOLD_MB || 100;
+    const value = process.env.WHATSAPP_HEALTH_MEDIA_FILES_THRESHOLD_MB;
+    return value ? parseInt(value, 10) : 100;
   }
 
   getHealthSessionFilesThreshold(): number {
-    return process.env.WHATSAPP_HEALTH_SESSION_FILES_THRESHOLD_MB || 100;
+    const value = process.env.WHATSAPP_HEALTH_SESSION_FILES_THRESHOLD_MB;
+    return value ? parseInt(value, 10) : 100;
   }
 
   getHealthMongoTimeout(): number {
-    return process.env.WHATSAPP_HEALTH_MONGO_TIMEOUT_MS || 3000;
+    const value = process.env.WHATSAPP_HEALTH_MONGO_TIMEOUT_MS;
+    return value ? parseInt(value, 10) : 3000;
   }
 
   get debugModeEnabled(): boolean {

@@ -8,8 +8,8 @@ import {
   SessionDTO,
   SessionInfo,
 } from '../../structures/sessions.dto';
-import { ISessionAuthRepository } from '../../storage/ISessionAuthRepository';
-import { ISessionConfigRepository } from '../../storage/ISessionConfigRepository';
+import { ISessionAuthRepository } from '../storage/ISessionAuthRepository';
+import { ISessionConfigRepository } from '../storage/ISessionConfigRepository';
 import { WhatsappSession } from './session.abc';
 import { WebhookConductor } from './webhooks.abc';
 

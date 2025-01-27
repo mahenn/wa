@@ -3,7 +3,8 @@ import {
   WAHAInternalEvent,
   WhatsappSession,
 } from '../../../core/abc/session.abc';
-import { WebjsClient } from '../../../core/engines/webjs/WebjsClient';
+import { WebjsClient } from './WebjsClient';
+import { LocalAuth } from './LocalAuth';
 import {
   AvailableInPlusVersion,
   NotImplementedByEngineError,
@@ -71,21 +72,26 @@ import {
   Reaction,
 } from 'whatsapp-web.js';
 import { Message as MessageInstance } from 'whatsapp-web.js/src/structures';
+import { Logger  } from 'pino';
+
 
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const QRCode = require('qrcode');
 
 export interface WebJSConfig {
   webVersion?: string;
+  cacheType: 'local' | 'none';
 }
 
 export class WhatsappSessionWebJSCore extends WhatsappSession {
   private START_ATTEMPT_DELAY_SECONDS = 2;
 
   engine = WAHAEngine.WEBJS;
-  protected engineConfig?: WebJSConfig;
-
+  //protected engineConfig?: WebJSConfig;
+  engineConfig = {} as WebJSConfig;
   private startDelayedJob: SingleDelayedJobRunner;
+  //private engineStateCheckDelayedJob: SingleDelayedJobRunner;
+
   private shouldRestart: boolean;
 
   whatsapp: WebjsClient;
@@ -100,8 +106,14 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
     this.startDelayedJob = new SingleDelayedJobRunner(
       'start-engine',
       this.START_ATTEMPT_DELAY_SECONDS * SECOND,
-      this.logger,
+      this.logger  as Logger // Cast to correct Logger type
     );
+
+    // this.engineStateCheckDelayedJob = new SingleDelayedJobRunner(
+    //   'engine-state-check',
+    //   2 * SECOND,
+    //   this.logger as Logger // Cast to correct Logger type
+    // );
   }
 
   /**
@@ -118,10 +130,12 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
     // this.log.debug(`Using web version: '${webVersion}'`);
     return {
       puppeteer: {
-        headless: true,
+        headless: false,
         executablePath: this.getBrowserExecutablePath(),
         args: this.getBrowserArgsForPuppeteer(),
         dumpio: this.isDebugEnabled(),
+        //userDataDir: '/Users/harshil/Development/wa/.wwebjs_auth/session-default',
+
       },
       webVersion: webVersion,
       webVersionCache: {
@@ -134,6 +148,14 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
 
   protected async buildClient() {
     const clientOptions = this.getClientOptions();
+    clientOptions.authStrategy = new LocalAuth({
+      clientId: this.name,
+      dataPath: './.wwebjs_auth/',
+      logger: this.logger,
+      rmMaxRetries: 4,
+    });
+    //await clientOptions.authStrategy.logout(); // Clear session
+    //console.log("client options here",clientOptions);
     this.addProxyConfig(clientOptions);
     return new WebjsClient(clientOptions);
   }
@@ -176,6 +198,8 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
   }
 
   protected async init() {
+
+    console.log("init method called");
     this.shouldRestart = true;
     this.whatsapp = await this.buildClient();
     this.whatsapp
@@ -274,7 +298,8 @@ export class WhatsappSessionWebJSCore extends WhatsappSession {
       const event = Events[key];
       this.whatsapp.on(event, (...data: any[]) => {
         const log = { event: event, data: data };
-        this.logger.debug({ event: log }, `WEBJS event`);
+        //this.logger.debug({ event: log }, `WEBJS event`);
+        this.logger.debug(`WEBJS event - ${event}: ${JSON.stringify(data)}`);
       });
     }
   }

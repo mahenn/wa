@@ -1,11 +1,15 @@
 // src/server/controllers/server.controller.ts
 
 import { Context, Next } from '@nocobase/actions';
-import { ServerStatus, ServerResponse, SystemMetrics } from '../structures/server.dto';
-//import { getSystemMetrics } from '../utils/metrics';
 import { WAHAEnvironment } from '../structures/environment.dto';
 import { VERSION } from '../version';
 import * as lodash from 'lodash';
+import { 
+  EnvironmentQuery, 
+  ServerStatusResponse 
+} from '../structures/server.dto';
+
+
 
 export const serverController = {
   async getVersion(ctx: Context, next: Next) {
@@ -20,7 +24,7 @@ export const serverController = {
   // Get environment variables
   async getEnvironment(ctx: Context, next: Next) {
     try {
-      const query = ctx.query as EnvironmentQuery;
+      const query = ctx.query;
       let result = process.env;
 
       if (!query.all) {

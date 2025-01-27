@@ -38,7 +38,9 @@ export const channelActions = {
         ctx.throw(404, 'Session not found');
       }
 
-      const request: CreateChannelRequest = ctx.request.body;
+     // const request: CreateChannelRequest = ctx.request.body;
+      const request = ctx.request.body as CreateChannelRequest;
+
       const channel = await session.channelsCreateChannel(request);
       
       ctx.body = channel;
@@ -60,7 +62,7 @@ export const channelActions = {
         ctx.throw(404, 'Session not found');
       }
 
-      const { id } = ctx.params;
+      const { id } = ctx.action.params;
       await session.channelsDeleteChannel(id);
       
       ctx.status = 204;
@@ -81,7 +83,7 @@ export const channelActions = {
         ctx.throw(404, 'Session not found');
       }
 
-      const { id } = ctx.params;
+      const { id } = ctx.action.params;
       let channel: Channel;
 
       if (isNewsletter(id)) {
@@ -110,7 +112,7 @@ export const channelActions = {
         ctx.throw(404, 'Session not found');
       }
 
-      const { id } = ctx.params;
+      const { id } = ctx.action.params;
       await session.channelsFollowChannel(id);
       
       ctx.status = 204;
@@ -131,7 +133,7 @@ export const channelActions = {
         ctx.throw(404, 'Session not found');
       }
 
-      const { id } = ctx.params;
+      const { id } = ctx.action.params;
       await session.channelsUnfollowChannel(id);
       
       ctx.status = 204;
@@ -152,7 +154,7 @@ export const channelActions = {
         ctx.throw(404, 'Session not found');
       }
 
-      const { id } = ctx.params;
+      const { id } = ctx.action.params;
       await session.channelsMuteChannel(id);
       
       ctx.status = 204;
@@ -168,12 +170,12 @@ export const channelActions = {
   async unmute(ctx: Context, next: Next) {
     try {
       const { sessionId = WHATSAPP_DEFAULT_SESSION_NAME } = ctx.action.params;
-      const session = await ctx.app.sessionManager.getSession(sessionId);
+      const session = await ctx.app.sessionManager.getSession(  sessionId);
       if (!session) {
         ctx.throw(404, 'Session not found');
       }
 
-      const { id } = ctx.params;
+      const { id } = ctx.action.params;
       await session.channelsUnmuteChannel(id);
       
       ctx.status = 204;

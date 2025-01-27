@@ -10,10 +10,10 @@ export class MediaLocalStorageConfig {
   }
 
   get filesFolder(): string {
-    return this.config.get('WHATSAPP_FILES_FOLDER', '/tmp/whatsapp-files');
+    return process.env.WHATSAPP_FILES_FOLDER || '/tmp/whatsapp-files';
   }
 
   get filesLifetime(): number {
-    return parseInt(this.config.get('WHATSAPP_FILES_LIFETIME', '180'));
+    return parseInt(process.env.WHATSAPP_FILES_LIFETIME || '180');
   }
 }

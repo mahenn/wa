@@ -12,7 +12,8 @@ import {
 export class StatusController {
   async sendTextStatus(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const status: TextStatus = ctx.request.body;
+    //const status: TextStatus = ctx.request.body;
+    const status = ctx.request.body as TextStatus;
 
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {
@@ -31,7 +32,8 @@ export class StatusController {
 
   async sendImageStatus(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const status: ImageStatus = ctx.request.body;
+    //const status: ImageStatus = ctx.request.body;
+    const status = ctx.request.body as ImageStatus;
 
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {
@@ -50,7 +52,8 @@ export class StatusController {
 
   async sendVoiceStatus(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const status: VoiceStatus = ctx.request.body;
+    //const status: VoiceStatus = ctx.request.body;
+    const status = ctx.request.body as VoiceStatus;
 
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {
@@ -69,7 +72,8 @@ export class StatusController {
 
   async sendVideoStatus(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const status: VideoStatus = ctx.request.body;
+    //const status: VideoStatus = ctx.request.body;
+    const status = ctx.request.body as VideoStatus;
 
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {
@@ -88,7 +92,8 @@ export class StatusController {
 
   async deleteStatus(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const status: DeleteStatusRequest = ctx.request.body;
+    //const status: DeleteStatusRequest = ctx.request.body;
+    const status = ctx.request.body as DeleteStatusRequest;
 
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {

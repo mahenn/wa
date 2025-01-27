@@ -1,6 +1,8 @@
 //src/server/controllers/contacts.controller.ts
 
 import { Context, Next } from '@nocobase/actions';
+import { ContactRequest } from '../structures/contacts.dto';
+
 
 export class ContactsController {
   async getAll(ctx: Context, next: Next) {
@@ -100,7 +102,9 @@ export class ContactsController {
 
   async block(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const { contactId } = ctx.request.body;
+    //const { contactId } = ctx.request.body;
+    const body = ctx.request.body as ContactRequest;
+    const { contactId } = body;
 
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {
@@ -119,7 +123,9 @@ export class ContactsController {
 
   async unblock(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const { contactId } = ctx.request.body;
+    //const { contactId } = ctx.request.body;
+    const body = ctx.request.body as ContactRequest;
+    const { contactId } = body;
 
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {

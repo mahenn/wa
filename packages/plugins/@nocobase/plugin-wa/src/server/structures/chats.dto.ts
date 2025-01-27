@@ -1,7 +1,7 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ChatIdProperty } from './properties.dto';
 import { Type } from 'class-transformer';
-import { IsNumber, IsOptional } from 'class-validator';
+import { IsNumber, IsOptional, IsNotEmpty } from 'class-validator';
 
 import { SessionQuery } from './base.dto';
 
@@ -43,4 +43,14 @@ export class ChatArchiveEvent {
   archived: boolean;
 
   timestamp: number;
+}
+
+
+export class EditMessageRequest {
+  @ApiProperty({
+    required: true,
+    description: 'New message text'
+  })
+  @IsNotEmpty()
+  text: string;
 }

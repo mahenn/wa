@@ -1,6 +1,8 @@
 //src/server/controllers/presence.controller.ts
 
 import { Context, Next } from '@nocobase/actions';
+import { WAHASessionPresence } from '../structures/presence.dto';
+
 
 export enum WAHAPresenceStatus {
   ONLINE = 'online',
@@ -13,7 +15,9 @@ export enum WAHAPresenceStatus {
 export class PresenceController {
   async setPresence(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const { presence, chatId } = ctx.request.body;
+    //const { presence, chatId } = ctx.request.body;
+    const body = ctx.request.body as WAHASessionPresence;
+    const { presence, chatId } = body;
 
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {
@@ -83,8 +87,10 @@ export class PresenceController {
 
   async subscribe(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const { chatId } = ctx.request.body;
-
+    //const { chatId } = ctx.request.body;
+    const body = ctx.request.body as { chatId: string };
+    const { chatId } = body;
+    
     const waSession = await ctx.app.sessionManager.getSession(session);
     if (!waSession) {
       ctx.throw(404, `Session ${session} not found`);

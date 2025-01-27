@@ -11,7 +11,7 @@ import { labelsController } from './actions/labels';
 import { presenceController } from './actions/presence';
 import { screenshotController } from './actions/screenshot';
 import { serverController } from './actions/server';
-import { sessionsController } from './actions/sessions';
+import { sessionsActions } from './actions/sessions';
 import { statusController } from './actions/status';
 import { versionController } from './actions/version';
 
@@ -21,14 +21,25 @@ import { EngineConfigService } from './core/config/EngineConfigService';
 import { MediaLocalStorageConfig } from './core/media/local/MediaLocalStorageConfig';
 
 import { sessionMiddleware } from './middlewares/session';
+import { SessionManagerCore } from './core/manager.core';
+
+import { Gateway } from '../../../../../core/server/src/gateway/index';
+
+
+declare module '@nocobase/server' {
+  interface Application {
+    sessionManager: SessionManagerCore;
+  }
+}
 
 export class PluginWaServer extends Plugin {
   private sessionManager: SessionManagerCore;
   private configService: WhatsappConfigService;
   private engineConfig: EngineConfigService;
+
   public startTimestamp: number;
 
-
+  
   async afterAdd() {}
 
   async beforeLoad() {
@@ -45,54 +56,160 @@ export class PluginWaServer extends Plugin {
       }
     });
 
-    this.engineConfig = new EngineConfigService(this.app.config);
-    this.configService = new WhatsappConfigService(this.app);
+    this.engineConfig = new EngineConfigService();
+    this.configService = new WhatsappConfigService();
     this.sessionManager = new SessionManagerCore(this.configService,this.engineConfig,Logger);
+    
     this.app.sessionManager = this.sessionManager;
+
+    console.log(this.sessionManager);
+
+    // Handle session startup
+    // this.app.on('beforeStart', async () => {
+    //   await this.sessionManager.onModuleInit();
+    //   // Start predefined sessions if configured
+    //   if (this.configService.startSessions.length > 0) {
+    //     for (const session of this.configService.startSessions) {
+    //       await this.sessionManager.start(session);
+    //     }
+    //   }
+    // });
+
+    // // Handle graceful shutdown
+    // this.app.on('beforeStop', async () => {
+    //   console.log("before stop even called..................................")
+    //   await this.sessionManager.beforeApplicationShutdown();
+    // });
+
+
+    const gateway = Gateway.getInstance();
+
+    if (!gateway.wsServer || !gateway.wsServer.wss) {
+      console.error('WebSocket is not initialized on the server side');
+      return;
+    }
+
+    const wsServer = gateway.wsServer.wss;
+
+    wsServer.on('connection', async (socket) => {
+
+    console.log('Client connected to WebSocket');
+
+    //await this.initializeOrReuseSession(socket, "phone-123");
+
+    const messageHandler = async (message: string) => {
+      let parsedMessage;
+        try {
+          parsedMessage = JSON.parse(message);
+        } catch (error) {
+          console.error('Non-JSON message received:', message);
+          return;
+        }
+
+        try{
+        const { sessionId, type, chatId, content,offset } = parsedMessage;
+
+        console.log("paresedMessage",sessionId,type,chatId,content,offset);
+
+        if (!sessionId) {
+          console.error('No sessionId found in message');
+          return;
+        }
+
+
+
+        switch (type) {
+          case 'start-session':           
+              console.log('Session already exists:', sessionId);
+              socket.send(JSON.stringify({ type: 'ready', message: 'WhatsApp session is ready!' }));
+            break;
+
+          case 'logout':
+           // console.log(`Logging out session: ${sessionId}`);
+           // await this.logoutFromWhatsApp(socket, sessionId);
+            break;
+
+          case 'get-messages':
+            //await this.fetchMessagesForChat(socket, chatId, sessionId,offset);
+            break;
+
+          case 'send-message':
+          //  console.log(`Send message event received for session: ${sessionId}`);
+            //await this.sendChat(socket, chatId, content, sessionId);
+            break;
+
+          case 'new-message':
+            console.log(`new message received : ${sessionId}`,content);
+            //await this.handleSendMessage(socket, chatId, content, sessionId);
+            break;
+
+          case 'get-contacts':
+         //   console.log(`Fetching contacts for session: ${sessionId}`);
+           // await this.sendContacts(socket, sessionId);
+            break;
+
+          case 'get-chats':
+          //  console.log(`Fetching chats for session: ${sessionId}`);
+            //await this.sendChats(socket, sessionId);
+            break;
+          case 'react-to-message':
+            // await this.handleWhatsAppOperation(socket, chatId, content,sessionId, () => this.handleReactToMessage(socket, chatId, content, sessionId));
+            break;
+
+          default:
+            console.warn('Unhandled event type:', type);
+        }
+
+        }catch(error){
+        console.log("error in pase message");
+      }
+    };
+
+
+      socket.on('message', messageHandler);
+
+      socket.on('close', () => {
+        console.log('WebSocket client disconnected');
+        socket.removeListener('message', messageHandler);
+      });
+
+    });
+
+
+
 
 
     // Register auth actions
     this.app.resource({
       name: 'waauth',
+      middlewares: [sessionMiddleware],
       actions: {
         'qr': {
           resource: false,
           method: 'get',
           handler: authActions.getQR
         },
-        'request-code': {
-          resource: false,
-          method: 'post',
-          handler: authActions.requestCode
-        },
-        'authorize-code': {
-          resource: false,
-          method: 'post',
-          handler: authActions.authorizeCode
-        },
-        'captcha': [
-          {
-            resource: false,
-            method: 'get',
-            handler: authActions.getCaptcha
-          },
-          {
-            resource: false,
-            method: 'post',
-            handler: authActions.submitCaptcha
-          }
-        ]
-      },
-      middlewares: [
-        // Validate session parameter
-        async (ctx, next) => {
-          const { session } = ctx.action.params;
-          if (!session) {
-            ctx.throw(400, 'Session parameter is required');
-          }
-          await next();
-        }
-      ]
+        // 'request-code': {
+        //   resource: false,
+        //   method: 'post',
+        //   handler: authActions.requestCode
+        // },
+        // 'authorize-code': {
+        //   resource: false,
+        //   method: 'post',
+        //   handler: authActions.authorizeCode
+        // },
+        // 'captcha': {
+        //   resource: false,
+        //   method: 'get',
+        //   handler: authActions.getCaptcha
+        // },
+        // 'captchaSubmit': {
+        //   resource: false,
+        //   method: 'post',
+        //   handler: authActions.submitCaptcha
+        // }
+      }
     });
 
     this.app.resource({
@@ -100,36 +217,41 @@ export class PluginWaServer extends Plugin {
       actions: {
         list: {
           method: 'get',
-          handler: sessionsController.list
+          handler: sessionsActions.list
         },
         get: {
           method: 'get',
           resourceName: ':session',
-          handler: sessionsController.get
+          handler: sessionsActions.get
         },
         create: {
           method: 'post',
-          handler: sessionsController.create
+          handler: sessionsActions.create
         },
         update: {
           method: 'put',
           resourceName: ':session',
-          handler: sessionsController.update
+          handler: sessionsActions.update
         },
         destroy: {
           method: 'delete',
           resourceName: ':session',
-          handler: sessionsController.destroy
+          handler: sessionsActions.destroy
         },
         start: {
           method: 'post',
           resourceName: ':session/start',
-          handler: sessionsController.start
+          handler: sessionsActions.start
         },
         stop: {
           method: 'post',
           resourceName: ':session/stop',
-          handler: sessionsController.stop
+          handler: sessionsActions.stop
+        },
+        restart: {
+          method: 'post',
+          resourceName: ':session/stop',
+          handler: sessionsActions.restart
         }
       }
     });
@@ -163,11 +285,6 @@ export class PluginWaServer extends Plugin {
           resource: false,
           method: 'get',
           handler: serverController.getStatus
-        },
-        'stop': {
-          resource: false,
-          method: 'post',
-          handler: serverController.stopServer
         }
       }
     });
@@ -439,11 +556,11 @@ export class PluginWaServer extends Plugin {
       name: 'wastatus',
       middlewares: [sessionMiddleware],
       actions: {
-        // sendText: {
-        //   method: 'post',
-        //   resourceName: 'text',
-        //   handler: statusController.sendTextStatus
-        // },
+        sendText: {
+          method: 'post',
+          resourceName: 'text',
+          handler: statusController.sendTextStatus
+        },
         sendImage: {
           method: 'post',
           resourceName: 'image',

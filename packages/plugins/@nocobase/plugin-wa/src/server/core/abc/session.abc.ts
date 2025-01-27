@@ -8,8 +8,8 @@ import { Label, LabelID } from '../../structures/labels.dto';
 import { LoggerBuilder } from '../../utils/logging';
 import { EventEmitter } from 'events';
 import * as fs from 'fs';
-import { createLogger,Logger } from '@nocobase/logger';
-
+//import { createLogger, Logger, LoggerOptions } from '@nocobase/logger';
+import { Logger } from 'pino';
 import { MessageId } from 'whatsapp-web.js';
 
 import {
@@ -133,6 +133,14 @@ export abstract class WhatsappSession {
     this.sessionConfig = sessionConfig;
     this.engineConfig = engineConfig;
     this.shouldPrintQR = printQR;
+
+    // this.logger = createLogger({
+    //   name: 'WhatsappSession',
+    //   transport: 'console',
+    //   level: 'info'
+    // } as LoggerOptions);
+
+
   }
 
   protected set status(value: WAHASessionStatus) {
@@ -156,43 +164,43 @@ export abstract class WhatsappSession {
     // https://github.com/wppconnect-team/wppconnect/issues/1326
     // https://www.bannerbear.com/blog/ways-to-speed-up-puppeteer-screenshots/
     return [
-      '--aggressive-cache-discard',
-      '--disable-accelerated-2d-canvas',
-      '--disable-application-cache',
-      '--disable-background-networking',
-      '--disable-cache',
-      '--disable-client-side-phishing-detection',
-      '--disable-component-update',
-      '--disable-default-apps',
-      '--disable-dev-shm-usage',
-      '--disable-extensions',
-      '--disable-gpu',
-      '--disable-offer-store-unmasked-wallet-cards',
-      '--disable-offline-load-stale-cache',
-      '--disable-popup-blocking',
-      '--disable-setuid-sandbox',
-      '--disable-site-isolation-trials', // https://superuser.com/questions/654565/how-to-run-google-chrome-in-a-single-process
-      '--disable-speech-api',
-      '--disable-sync',
-      '--disable-translate',
-      '--disable-web-security',
-      '--disk-cache-size=0',
-      '--hide-scrollbars',
-      '--ignore-certificate-errors',
-      '--ignore-ssl-errors',
-      '--in-process-gpu', // https://superuser.com/questions/654565/how-to-run-google-chrome-in-a-single-process
-      '--metrics-recording-only',
-      '--mute-audio',
-      '--no-default-browser-check',
-      '--no-first-run',
-      '--no-pings',
-      '--no-sandbox',
-      '--no-zygote',
-      '--password-store=basic',
-      '--renderer-process-limit=2', // https://superuser.com/questions/654565/how-to-run-google-chrome-in-a-single-process
-      '--safebrowsing-disable-auto-update',
-      '--single-process',
-      '--use-mock-keychain',
+    // '--aggressive-cache-discard',
+    // '--disable-accelerated-2d-canvas',
+    // '--disable-application-cache',
+    // '--disable-background-networking',
+    // '--disable-cache',
+    // '--disable-client-side-phishing-detection',
+    // '--disable-component-update',
+    // '--disable-default-apps',
+    // '--disable-dev-shm-usage',
+    // '--disable-extensions',
+    // '--disable-gpu',
+    // '--disable-popup-blocking',
+    // '--disable-setuid-sandbox',
+    // '--disable-site-isolation-trials',
+    // '--disable-speech-api',
+    // '--disable-sync',
+    // '--disable-translate',
+    // '--disk-cache-size=0',
+    // '--hide-scrollbars',
+    // '--ignore-certificate-errors',
+    // '--ignore-ssl-errors',
+     '--no-sandbox',
+    // '--disable-ukm-database', // Disable UKM database
+    // '--remote-debugging-port=0', // Disable DevTools listening
+    // '--password-store=basic',
+    // '--disable-features=UKMDatabase,AutofillServerCommunication,PasswordManager',
+    //'--renderer-process-limit=2',
+    // '--safebrowsing-disable-auto-update',
+    // '--use-mock-keychain',
+    // '--disable-top-sites',
+    // '--disable-history-db',
+    // '--disable-sync',
+    // '--disable-translate',
+    // '--disable-background-networking',
+    // '--disable-default-apps',
+    // '--disable-client-side-phishing-detection',
+    // '--disable-component-update',
     ];
   }
 

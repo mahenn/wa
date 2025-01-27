@@ -1,5 +1,4 @@
-import { createLogger,Logger } from '@nocobase/logger';
-
+import { createLogger,Logger,LoggerOptions } from '@nocobase/logger';
 import { parseBool } from '../../helpers';
 import { WAHAEngine } from '../../structures/enums.dto';
 import { getEngineName } from '../../version';
@@ -8,12 +7,15 @@ import { getEngineName } from '../../version';
 export class EngineConfigService {
   private logger: Logger;
 
-  constructor(protected configService) {
+  constructor() {
     this.logger =  createLogger({
       name: 'EngineConfigService',
-      transports: ['console']
-    });
+      transports: ['console'],
+      level: 'info'
+    } as LoggerOptions);
   }
+
+  
 
   getDefaultEngineName(): WAHAEngine {
     const value = getEngineName();

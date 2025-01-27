@@ -60,7 +60,7 @@ export class NowebStoreConfig {
     example: true,
   })
   @IsBoolean()
-  enabled: boolean = false;
+  enabled: boolean = true;
 
   @ApiProperty({
     description:
@@ -69,7 +69,7 @@ export class NowebStoreConfig {
       'If disabled, only messages early than 90 days will be downloaded and some contacts may be missing.',
   })
   @IsBoolean()
-  fullSync: boolean = false;
+  fullSync: boolean = true;
 }
 
 export class NowebConfig {

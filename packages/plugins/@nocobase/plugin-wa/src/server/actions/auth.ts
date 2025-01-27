@@ -17,7 +17,12 @@ export const authActions = {
   // Get QR code for pairing WhatsApp API
   async getQR(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
-    const query = ctx.query as QRCodeQuery;
+    //const query = ctx.query as QRCodeQuery;
+    console.log(session);
+
+    const query: QRCodeQuery = {
+      format: (ctx.query.format as QRCodeFormat) || QRCodeFormat.IMAGE
+    };
 
     const waSession = await ctx.app.sessionManager.getSession(session) as WhatsappSession;
 
@@ -26,7 +31,7 @@ export const authActions = {
     }
 
     const qr = waSession.getQR();
-    
+    console.log("qr s ",qr);
     if (query.format === QRCodeFormat.RAW) {
       ctx.body = { value: qr.raw };
     } else {

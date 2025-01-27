@@ -25,7 +25,7 @@ import { WebhookConfig } from '../structures/webhooks.config.dto';
 import { SessionManager } from './abc/manager.abc';
 import { SessionParams, WhatsappSession } from './abc/session.abc';
 import { EngineConfigService } from './config/EngineConfigService';
-//import { WhatsappSessionNoWebCore } from './engines/noweb/session.noweb.core';
+import { WhatsappSessionNoWebCore } from './engines/noweb/session.noweb.core';
 import { WhatsappSessionWebJSCore } from './engines/webjs/session.webjs.core';
 import { DOCS_URL } from './exceptions';
 import { getProxyConfig } from './helpers.proxy';
@@ -87,8 +87,8 @@ export class SessionManagerCore extends SessionManager {
   protected getEngine(engine: WAHAEngine): typeof WhatsappSession {
     if (engine === WAHAEngine.WEBJS) {
       return WhatsappSessionWebJSCore;
-    // } else if (engine === WAHAEngine.NOWEB) {
-    //   return WhatsappSessionNoWebCore;
+    } else if (engine === WAHAEngine.NOWEB) {
+      return WhatsappSessionNoWebCore;
     } else {
       throw new NotFoundException(`Unknown whatsapp engine '${engine}'.`);
     }
@@ -104,6 +104,7 @@ export class SessionManagerCore extends SessionManager {
     if (!this.session) {
       return;
     }
+    console.log("stoping sessions..........................")
     await this.stop(this.DEFAULT, true);
   }
 

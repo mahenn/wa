@@ -100,7 +100,7 @@ export class WASessionStatusBody {
   status: WAHASessionStatus;
 }
 
-export class WAHAWebhook {
+export class WAHAWebhook<T = any> {
   @ApiProperty({
     example: 'default',
   })
@@ -126,55 +126,52 @@ export class WAHAWebhook {
 
   event: WAHAEvents;
 
-  payload:
-    | WAGroupPayload
-    // eslint-disable-next-line @typescript-eslint/ban-types
-    | object;
+  payload: T ; 
 }
 
-class WAHAWebhookSessionStatus extends WAHAWebhook {
+class WAHAWebhookSessionStatus extends WAHAWebhook<WASessionStatusBody> {
   @ApiProperty({
     description: 'The event is triggered when the session status changes.',
   })
   event = WAHAEvents.SESSION_STATUS;
 
-  payload: WASessionStatusBody;
+  payload = null as WASessionStatusBody;
 }
 
-class WAHAWebhookMessage extends WAHAWebhook {
+class WAHAWebhookMessage extends WAHAWebhook<WAMessage> {
   @ApiProperty({ description: 'Incoming message.' })
   event = WAHAEvents.MESSAGE;
 
-  payload: WAMessage;
+   payload = null as WAMessage;
 }
 
-class WAHAWebhookMessageReaction extends WAHAWebhook {
+class WAHAWebhookMessageReaction extends WAHAWebhook<WAMessageReaction> {
   @ApiProperty({
     description:
       'The event is triggered when a user reacts or removes a reaction.',
   })
   event = WAHAEvents.MESSAGE_REACTION;
 
-  payload: WAMessageReaction;
+  payload = null as WAMessageReaction;
 }
 
-class WAHAWebhookMessageAny extends WAHAWebhook {
+class WAHAWebhookMessageAny extends WAHAWebhook<WAMessage> {
   @ApiProperty({
     description: 'Fired on all message creations, including your own.',
   })
   event = WAHAEvents.MESSAGE_ANY;
 
-  payload: WAMessage;
+  payload = null as WAMessage;
 }
 
-class WAHAWebhookMessageAck extends WAHAWebhook {
+class WAHAWebhookMessageAck extends WAHAWebhook<WAMessageAckBody> {
   @ApiProperty({
     description:
       'Receive events when server or recipient gets the message, read or played it.',
   })
   event = WAHAEvents.MESSAGE_ACK;
 
-  payload: WAMessageAckBody;
+  payload = null as WAMessageAckBody;
 }
 
 class WAHAWebhookMessageRevoked extends WAHAWebhook {
@@ -185,7 +182,7 @@ class WAHAWebhookMessageRevoked extends WAHAWebhook {
   })
   event = WAHAEvents.MESSAGE_REVOKED;
 
-  payload: WAMessageRevokedBody;
+  payload = null as WAMessageRevokedBody;
 }
 
 class WAHAWebhookStateChange extends WAHAWebhook {
@@ -194,7 +191,7 @@ class WAHAWebhookStateChange extends WAHAWebhook {
   })
   event = WAHAEvents.STATE_CHANGE;
 
-  payload: any;
+  payload = null;
 }
 
 class WAHAWebhookGroupJoin extends WAHAWebhook {
@@ -203,7 +200,7 @@ class WAHAWebhookGroupJoin extends WAHAWebhook {
   })
   event = WAHAEvents.GROUP_JOIN;
 
-  payload: any;
+  payload = null;
 }
 
 class WAHAWebhookGroupLeave extends WAHAWebhook {
@@ -212,7 +209,7 @@ class WAHAWebhookGroupLeave extends WAHAWebhook {
   })
   event = WAHAEvents.GROUP_LEAVE;
 
-  payload: any;
+  payload = null;
 }
 
 class WAHAWebhookPresenceUpdate extends WAHAWebhook {
@@ -221,7 +218,7 @@ class WAHAWebhookPresenceUpdate extends WAHAWebhook {
   })
   event = WAHAEvents.PRESENCE_UPDATE;
 
-  payload: WAHAChatPresences;
+  payload = null as WAHAChatPresences;
 }
 
 class WAHAWebhookPollVote extends WAHAWebhook {
@@ -230,7 +227,7 @@ class WAHAWebhookPollVote extends WAHAWebhook {
   })
   event = WAHAEvents.POLL_VOTE;
 
-  payload: PollVotePayload;
+  payload = null as PollVotePayload;
 }
 
 class WAHAWebhookPollVoteFailed extends WAHAWebhook {
@@ -241,7 +238,7 @@ class WAHAWebhookPollVoteFailed extends WAHAWebhook {
   })
   event = WAHAEvents.POLL_VOTE_FAILED;
 
-  payload: PollVotePayload;
+  payload = null as PollVotePayload;
 }
 
 class WAHAWebhookChatArchive extends WAHAWebhook {
@@ -251,7 +248,7 @@ class WAHAWebhookChatArchive extends WAHAWebhook {
   })
   event = WAHAEvents.CHAT_ARCHIVE;
 
-  payload: ChatArchiveEvent;
+  payload = null as ChatArchiveEvent;
 }
 
 class WAHAWebhookCallReceived extends WAHAWebhook {
@@ -261,7 +258,7 @@ class WAHAWebhookCallReceived extends WAHAWebhook {
   })
   event = WAHAEvents.CALL_RECEIVED;
 
-  payload: CallData;
+  payload= null as CallData;
 }
 
 class WAHAWebhookCallAccepted extends WAHAWebhook {
@@ -271,7 +268,7 @@ class WAHAWebhookCallAccepted extends WAHAWebhook {
   })
   event = WAHAEvents.CALL_ACCEPTED;
 
-  payload: CallData;
+  payload= null as CallData;
 }
 
 class WAHAWebhookCallRejected extends WAHAWebhook {
@@ -281,7 +278,7 @@ class WAHAWebhookCallRejected extends WAHAWebhook {
   })
   event = WAHAEvents.CALL_REJECTED;
 
-  payload: CallData;
+  payload = null as CallData;
 }
 
 class WAHAWebhookLabelUpsert extends WAHAWebhook {
@@ -290,7 +287,7 @@ class WAHAWebhookLabelUpsert extends WAHAWebhook {
   })
   event = WAHAEvents.LABEL_UPSERT;
 
-  payload: Label;
+  payload = null as Label;
 }
 
 class WAHAWebhookLabelDeleted extends WAHAWebhook {
@@ -299,7 +296,7 @@ class WAHAWebhookLabelDeleted extends WAHAWebhook {
   })
   event = WAHAEvents.LABEL_DELETED;
 
-  payload: Label;
+  payload = null as Label;
 }
 
 class WAHAWebhookLabelChatAdded extends WAHAWebhook {
@@ -308,16 +305,16 @@ class WAHAWebhookLabelChatAdded extends WAHAWebhook {
   })
   event = WAHAEvents.LABEL_CHAT_ADDED;
 
-  payload: LabelChatAssociation;
+  payload = null as LabelChatAssociation;
 }
 
-class WAHAWebhookLabelChatDeleted extends WAHAWebhook {
+class WAHAWebhookLabelChatDeleted extends WAHAWebhook<LabelChatAssociation> {
   @ApiProperty({
     description: 'The event is triggered when a label is deleted from a chat',
   })
   event = WAHAEvents.LABEL_CHAT_DELETED;
 
-  payload: LabelChatAssociation;
+  payload = null as LabelChatAssociation;
 }
 
 const WAHA_WEBHOOKS = [

@@ -4,7 +4,6 @@ import { Context, Next } from '@nocobase/actions';
 import { 
   GetChatsQuery,
   GetChatMessagesQuery,
-  GetChatMessagesFilter,
   EditMessageRequest
 } from '../structures/chats.dto';
 import { parseBool } from '../helpers';
@@ -15,10 +14,7 @@ export const chatsController = {
    */
   async getChats(ctx: Context, next: Next) {
     try {
-      const session = await ctx.app.sessionManager.getSession(ctx.state.sessionId);
-      if (!session) {
-        ctx.throw(404, 'Session not found');
-      }
+      const session = ctx.state.session
 
       const query: GetChatsQuery = ctx.query;
       const chats = await session.getChats(query);
@@ -34,7 +30,7 @@ export const chatsController = {
    */
   async deleteChat(ctx: Context, next: Next) {
     try {
-      const session = await ctx.app.sessionManager.getSession(ctx.state.sessionId);
+      const session = ctx.state.session
       if (!session) {
         ctx.throw(404, 'Session not found');
       }
@@ -54,19 +50,21 @@ export const chatsController = {
    */
   async getChatMessages(ctx: Context, next: Next) {
     try {
-      const session = await ctx.app.sessionManager.getSession(ctx.state.sessionId);
+      const session = ctx.state.session
       if (!session) {
         ctx.throw(404, 'Session not found');
       }
 
       const { chatId } = ctx.action.params;
 
-      const query: GetChatMessagesQuery = ctx.query;
-      const downloadMedia = parseBool(ctx.query.downloadMedia);
+      //const query: GetChatMessagesQuery = ctx.query;
+      const query: GetChatMessagesQuery = {
+        session: ctx.state.sessionId ,
+        limit: Number(ctx.query.limit) || 100,
+        downloadMedia: parseBool(ctx.query.downloadMedia ?? true)
+      };
 
-      console.log(query.limit,downloadMedia,chatId);
-      
-      const messages = await session.getChatMessages(chatId, query.limit, downloadMedia);
+      const messages = await session.getChatMessages(chatId, query.limit, query.downloadMedia);
       ctx.body = messages;
     } catch (error) {
       ctx.throw(500, `Failed to get chat messages: ${error.message}`);
@@ -123,7 +121,7 @@ export const chatsController = {
       }
 
       const { chatId, messageId } = ctx.action.params;
-      const body: EditMessageRequest = ctx.request.body;
+      const body = ctx.request.body;
       await session.editMessage(chatId, messageId, body);
       ctx.status = 204;
     } catch (error) {

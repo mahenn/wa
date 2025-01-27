@@ -4,24 +4,24 @@ import { WAHAWebhook } from '../structures/webhooks.dto';
 import { VERSION } from '../version';
 import { WAHAInternalEvent, WhatsappSession } from './abc/session.abc';
 import { WebhookConductor, WebhookSender } from './abc/webhooks.abc';
-import request = require('request');
 import { LoggerBuilder } from '../utils/logging';
 import { Logger } from 'pino';
+import request from 'request';
 
 export class WebhookSenderCore extends WebhookSender {
   send(json) {
-    this.logger.info({ url: this.url }, `Sending POST ...`);
-    this.logger.debug({ data: json }, `POST DATA`);
+    this.logger.info(`Sending POST to ${this.url}`);
+    this.logger.debug('POST DATA: %j', json);
 
     request.post(this.url, { json: json }, (error, res, body) => {
       if (error) {
-        this.logger.error(error);
+        this.logger.error('Request error: %o', error);
         return;
       }
       this.logger.info(
         `POST request was sent with status code: ${res.statusCode}`,
       );
-      this.logger.debug({ body: body }, `Response`);
+      this.logger.debug('Response body: %j', body);
     });
   }
 }
