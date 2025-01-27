@@ -17,7 +17,7 @@ const ContactsSidebar = ({ chats, onSelectChat }) => {
   };
 
   // Get chat ID 
-  const getChatId = (chat) => chat.id._serialized || chat.id.user;
+  const getChatId = (chat) => chat.id._serialized || chat.id;
  
   // Filter chats based on search term
   const filteredChats = chats.filter((chat) => {

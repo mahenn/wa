@@ -59,7 +59,7 @@ export class NowebPersistentStore implements INowebStore {
 
   bind(ev: BaileysEventEmitter, socket: any) {
     // All
-    ev.on('messaging-history.set', async (data) => await this.onMessagingHistorySet(data));
+    ev.on('messaging-history.set', (data) => this.onMessagingHistorySet(data));
     // Messages
     ev.on('messages.upsert', (data) =>
       this.withLock('messages', () => this.onMessagesUpsert(data)),
@@ -100,13 +100,6 @@ export class NowebPersistentStore implements INowebStore {
     // Presence
     ev.on('presence.update', (data) => this.onPresenceUpdate(data));
 
-    // Ensure data persistence on critical events @mahenn
-    ev.on('connection.update', async (update) => {
-        if (update.connection === 'close') {
-            await this.close();
-        }
-    });
-
     this.socket = socket;
   }
 
@@ -124,9 +117,9 @@ export class NowebPersistentStore implements INowebStore {
         'history sync - clearing all entities, got latest history',
       );
       await Promise.all([
-        // this.withLock('contacts', () => this.contactRepo.deleteAll()),
-        // this.withLock('chats', () => this.chatRepo.deleteAll()),
-        // this.withLock('messages', () => this.messagesRepo.deleteAll()),
+        this.withLock('contacts', () => this.contactRepo.deleteAll()),
+        this.withLock('chats', () => this.chatRepo.deleteAll()),
+        this.withLock('messages', () => this.messagesRepo.deleteAll()),
 
       ]);
     }
@@ -136,8 +129,8 @@ export class NowebPersistentStore implements INowebStore {
         await this.onContactsUpsert(contacts);
         this.logger.info(`history sync - '${contacts.length}' synced contacts`);
       }),
-      this.withLock('chats', () => this.onChatUpsert(chats)),
       this.withLock('messages', () => this.syncMessagesHistory(messages)),
+      this.withLock('chats', () => this.onChatUpsert(chats)),
     ]);
   }
 

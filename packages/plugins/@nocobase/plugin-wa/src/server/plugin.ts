@@ -24,6 +24,11 @@ import { sessionMiddleware } from './middlewares/session';
 import { SessionManagerCore } from './core/manager.core';
 
 import { Gateway } from '../../../../../core/server/src/gateway/index';
+import { 
+  GetChatsQuery,
+  GetChatMessagesQuery,
+  EditMessageRequest
+} from './structures/chats.dto';
 
 
 declare module '@nocobase/server' {
@@ -149,8 +154,9 @@ export class PluginWaServer extends Plugin {
             break;
 
           case 'get-chats':
-          //  console.log(`Fetching chats for session: ${sessionId}`);
-            //await this.sendChats(socket, sessionId);
+            console.log(`Fetching chats for session: ${sessionId}`);
+            await this.sendChats(socket, sessionId);
+            //const chats = await session.getChats(query);
             break;
           case 'react-to-message':
             // await this.handleWhatsAppOperation(socket, chatId, content,sessionId, () => this.handleReactToMessage(socket, chatId, content, sessionId));
@@ -161,7 +167,7 @@ export class PluginWaServer extends Plugin {
         }
 
         }catch(error){
-        console.log("error in pase message");
+        console.log("error in pase message",error.message);
       }
     };
 
@@ -176,7 +182,7 @@ export class PluginWaServer extends Plugin {
     });
 
 
-
+    
 
 
     // Register auth actions
@@ -624,6 +630,40 @@ export class PluginWaServer extends Plugin {
 
     this.app.acl.allow('*', '*');
 
+  }
+
+  private async sendChats(socket: WebSocket, sessionId: string) {
+
+    const client = await this.sessionManager.getSession(sessionId);
+
+    try {
+      const query: GetChatsQuery = { limit: 100, offset: 0  };
+
+      const chats = await client.getChats(query);
+      console.log(chats);
+      //const chats = await client.getChats();
+      //chats.sendSeen();
+      console.log(`Chats for sessionId: ${sessionId}`, chats.length);
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'chats',
+          chats,
+        }));
+      }
+    } catch (error) {
+      console.log(client);
+      console.error(`Error fetching chats for sessionId: ${sessionId}`, error.message);
+
+      //await this.initializeOrReuseSession(socket, sessionId);
+
+
+      // if (socket.readyState === WebSocket.OPEN) {
+      //   socket.send(JSON.stringify({
+      //     type: 'error',
+      //     message: 'Error fetching chats.',
+      //   }));
+      // }
+    }
   }
 
   async install() {}

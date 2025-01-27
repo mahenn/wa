@@ -17,7 +17,7 @@ const WhatsAppSession = () => {
   const [retryAttempts, setRetryAttempts] = useState(0); // Track retry attempts
   const wsClient = useRef(useApp()?.ws);
   //const wsClient = useRef(window.app?.ws);
-  const sessionId = 'phone-123';
+  const sessionId = 'default';
 
   const loadMessages = useCallback((chatId: string, offset = 0) => {
     return new Promise((resolve, reject) => {

@@ -17,6 +17,7 @@ export const chatsController = {
       const session = ctx.state.session
 
       const query: GetChatsQuery = ctx.query;
+      
       const chats = await session.getChats(query);
       ctx.body = chats;
     } catch (error) {

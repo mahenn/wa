@@ -269,7 +269,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     }
     if (!this.store) {
       this.logger.debug(`Making a new store...`);
-      const storeEnabled = this.sessionConfig?.noweb?.store?.enabled || false;
+      const storeEnabled = this.sessionConfig?.noweb?.store?.enabled || true;
       if (storeEnabled) {
         this.logger.debug('Using NowebPersistentStore');
         const storage = this.storageFactory.createStorage(
