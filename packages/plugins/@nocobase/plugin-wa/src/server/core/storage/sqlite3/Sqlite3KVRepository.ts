@@ -32,6 +32,16 @@ export class Sqlite3KVRepository<Entity> {
 
     // sqlite does not support inserting default values. Set the `useNullAsDefault` flag to hide this warning. (see docs https://knexjs.org/guide/query-builder.html#insert).
     this.knex = Knex({ client: 'better-sqlite3', useNullAsDefault: true });
+    // this.knex = Knex({
+    //   client: 'mysql',
+    //   connection: {
+    //     host: 'localhost',
+    //     port: 3307,
+    //     user: 'root',
+    //     password: 'root@123',
+    //     database: 'wa',
+    //   },
+    // }); //@mahen
   }
 
   getAll(pagination?: PaginationParams) {

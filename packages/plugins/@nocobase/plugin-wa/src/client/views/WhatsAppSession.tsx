@@ -172,7 +172,7 @@ const WhatsAppSession = () => {
     return () => {
       wsClient.current.off('message', messageHandler);
     };
-  }, [selectedChatId]);
+  }, [selectedChatId,updateChatsWithNewMessage]);
 
   // useEffect(() => {
   //   if (selectedChatId && chatMessages.length === 0) {

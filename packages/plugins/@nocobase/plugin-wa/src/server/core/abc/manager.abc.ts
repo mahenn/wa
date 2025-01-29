@@ -49,7 +49,7 @@ export abstract class SessionManager  {
       timeout: this.LOCK_TIMEOUT,
     });
     this.log= log;
-    console.log(this.log);
+    //console.log("log is here",this.log);
     this.log.setContext(SessionManager.name);
   }
 

@@ -162,6 +162,10 @@ import { NowebPersistentStore } from './store/NowebPersistentStore';
 import { NowebStorageFactoryCore } from './store/NowebStorageFactoryCore';
 import { ensureNumber, extractMediaContent } from './utils';
 
+
+import { WaStorageFactory } from '../../../storage/storage.factory';
+
+
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const QRCode = require('qrcode');
 
@@ -197,6 +201,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
   private msgRetryCounterCache: NodeCache;
   protected engineLogger: BaileysLogger;
   private authNOWEBStore: any;
+  //private db: Database; //@mahen
 
 
   sock: ReturnType<typeof makeWASocket>;
@@ -334,10 +339,15 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     }
 
     this.logger.debug('Using NowebPersistentStore');
-    const storage = this.storageFactory.createStorage(
-      this.sessionStore,
-      this.name,
-    );
+    // const storage = this.storageFactory.createStorage(
+    //   this.sessionStore,
+    //   this.name,
+    // ); @mahen comm
+    
+    //console.log("application db is ",this.db);
+    const storage = WaStorageFactory.createStorage(this.db); //@mahen
+
+
     this.store = new NowebPersistentStore(
       this.loggerBuilder.child({ name: NowebPersistentStore.name }),
       storage,
@@ -922,6 +932,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
   public async getChatsOverview(
     pagination: PaginationParams,
   ): Promise<ChatSummary[]> {
+    //console.log("db store is here",this.store);
     const chats = await this.store.getChats(pagination, false);
     // Remove unreadCount, it's not ready yet
     chats.forEach((chat) => delete chat.unreadCount);

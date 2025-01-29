@@ -68,6 +68,7 @@ export class NowebPersistentStore implements INowebStore {
   ) {
     this.socket = null;
     this.chatRepo = storage.getChatRepository();
+    //console.log("chat repo is ",this.chatRepo);
     this.groupRepo = storage.getGroupRepository();
     this.contactRepo = storage.getContactsRepository();
     this.messagesRepo = storage.getMessagesRepository();

@@ -25,6 +25,7 @@ import { MediaLocalStorageConfig } from './core/media/local/MediaLocalStorageCon
 import { MediaLocalStorageFactory } from './core/media/local/MediaLocalStorageFactory';
 import { sessionMiddleware } from './middlewares/session';
 import { SessionManagerCore } from './core/manager.core';
+import { WaChatRepository } from './repositories/chat.repository';
 
 import { Gateway } from '../../../../../core/server/src/gateway/index';
 import { 
@@ -65,7 +66,12 @@ export class PluginWaServer extends Plugin {
     });
     logger.setContext('WhatsAppPlugin'); // Set context before passing to SessionManager
 
-    this.engineConfig = new EngineConfigService();
+
+    this.app.db.registerRepositories({
+      chatRepo: WaChatRepository
+    });
+
+    this.engineConfig = new EngineConfigService(this.app.db);
     this.configService = new WhatsappConfigService();
     const mediaLocalStorageConfig = new MediaLocalStorageConfig(this.configService);
     const webjsEngineConfigService = new WebJSEngineConfigService();
@@ -684,7 +690,7 @@ export class PluginWaServer extends Plugin {
         socket.send(JSON.stringify({type: 'chats',chats,}));
       }
     } catch (error) {
-      console.log(client);
+      //console.log(client);
       console.error(`Error fetching chats for sessionId: ${sessionId}`, error.message);
     }
   }

@@ -3,9 +3,10 @@ import { WAHAEvents } from './structures/enums.dto';
 import { parseBool } from './helpers';
 import { WebhookConfig } from './structures/webhooks.config.dto';
 
+
 //@Injectable()
 export class WhatsappConfigService {
-  
+    
   constructor() {
   }
 

@@ -117,6 +117,7 @@ export interface SessionParams {
   proxyConfig?: ProxyConfig;
   sessionConfig?: SessionConfig;
   engineConfig?: any;
+  db?: any;
 }
 
 export abstract class WhatsappSession {
@@ -131,6 +132,7 @@ export abstract class WhatsappSession {
   protected proxyConfig?: ProxyConfig;
   public sessionConfig?: SessionConfig;
   protected engineConfig?: any;
+  protected db?: any;
   protected unpairing: boolean = false;
 
   private _status: WAHASessionStatus;
@@ -150,6 +152,7 @@ export abstract class WhatsappSession {
     mediaManager,
     sessionConfig,
     engineConfig,
+    db,
   }: SessionParams) {
     this.status$ = new BehaviorSubject(null);
     this.name = name;
@@ -214,6 +217,7 @@ export abstract class WhatsappSession {
     this.sessionConfig = sessionConfig;
     this.engineConfig = engineConfig;
     this.shouldPrintQR = printQR;
+    this.db = db;
 
     // this.logger = createLogger({
     //   name: 'WhatsappSession',

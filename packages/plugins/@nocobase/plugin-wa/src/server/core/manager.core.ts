@@ -81,7 +81,7 @@ export class SessionManagerCore extends SessionManager {
     log: PinoLogger,
     private mediaStorageFactory: MediaStorageFactory,
   ) {
-    console.log("core",log);
+    //console.log("core",log);
     super(config, log);
     
     this.session = DefaultSessionStatus.STOPPED;
@@ -190,7 +190,10 @@ export class SessionManagerCore extends SessionManager {
       sessionStore: this.store,
       proxyConfig: proxyConfig,
       sessionConfig: this.sessionConfig,
+      db: this.engineConfigService.database,
     };
+
+    //console.log("engine config here",this.engineConfigService);
 
     if (this.EngineClass === WhatsappSessionWebJSCore) {
       sessionConfig.engineConfig = this.webjsEngineConfigService.getConfig();

@@ -4,12 +4,13 @@ import { Logger } from '@nestjs/common';
 import { parseBool } from '../../helpers';
 import { WAHAEngine } from '../../structures/enums.dto';
 import { getEngineName } from '../../version';
-
+import { Database } from '@nocobase/server';
 
 export class EngineConfigService {
   private logger: Logger;
+ 
 
-  constructor() {
+  constructor(private db) {
     // this.logger =  createLogger({
     //   name: 'EngineConfigService',
     //   transports: ['console'],
@@ -17,7 +18,7 @@ export class EngineConfigService {
     // } as LoggerOptions);
 
     this.logger = new Logger('EngineConfigService');
-    
+    this.db = db;
   }
 
   
@@ -36,5 +37,9 @@ export class EngineConfigService {
   get shouldPrintQR(): boolean {
     const value = process.env.WAHA_PRINT_QR || true;
     return parseBool(value);
+  }
+
+  get database(): Database {
+    return this.db;
   }
 }

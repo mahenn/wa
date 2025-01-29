@@ -62,6 +62,7 @@ export class LocalStoreCore extends LocalStore {
   getWAHADatabase(): any {
     if (!this.db) {
       const engineDir = this.getEngineDirectory();
+      console.log('waha.sqlite3 is here',engineDir)
       const database = path.join(engineDir, 'waha.sqlite3');
       this.db = new Database(database);
       this.db.pragma('journal_mode = WAL;');
@@ -72,5 +73,5 @@ export class LocalStoreCore extends LocalStore {
   async close() {
     this.db?.close();
   }
-  
+
 }
