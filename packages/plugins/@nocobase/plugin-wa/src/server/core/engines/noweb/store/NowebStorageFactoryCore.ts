@@ -4,6 +4,6 @@ import { Sqlite3Storage } from './sqlite3/Sqlite3Storage';
 
 export class NowebStorageFactoryCore {
   createStorage(store: DataStore, name: string): INowebStorage {
-    return new Sqlite3Storage(':memory:');
+    return new Sqlite3Storage('./my-database.db');
   }
 }

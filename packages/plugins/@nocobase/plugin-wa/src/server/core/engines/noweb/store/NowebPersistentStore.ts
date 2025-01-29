@@ -1,25 +1,35 @@
-import {
+import makeWASocket, {
+  areJidsSameUser,
   BaileysEventEmitter,
   Chat,
   ChatUpdate,
   Contact,
+  GroupParticipant,
   isRealMessage,
   jidNormalizedUser,
+  ParticipantAction,
   proto,
   updateMessageWithReaction,
   updateMessageWithReceipt,
 } from '@adiwajshing/baileys';
+import { GroupMetadata } from '@adiwajshing/baileys/src/Types/GroupMetadata';
 import { Label } from '@adiwajshing/baileys/src/Types/Label';
 import {
   LabelAssociation,
   LabelAssociationType,
 } from '@adiwajshing/baileys/src/Types/LabelAssociation';
+import { IGroupRepository } from '../../../../IGroupRepository';
 import { ILabelAssociationRepository } from './ILabelAssociationsRepository';
 import { ILabelsRepository } from './ILabelsRepository';
+import { GetChatMessagesFilter } from '../../../../structures/chats.dto';
+import { PaginationParams, SortOrder } from '../../../../structures/pagination.dto';
+import { DefaultMap } from '../../../../utils/DefaultMap';
+import { sleep, waitUntil } from '../../../../utils/promiseTimeout';
+import * as lodash from 'lodash';
+
 import { toNumber } from 'lodash';
 import { Logger } from 'pino';
 
-import { toJID } from '../session.noweb.core';
 import { IChatRepository } from './IChatRepository';
 import { IContactRepository } from './IContactRepository';
 import { IMessagesRepository } from './IMessagesRepository';
@@ -29,9 +39,13 @@ import { INowebStore } from './INowebStore';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const AsyncLock = require('async-lock');
 
+type ms = number;
+const HOUR: ms = 60 * 60 * 1000;
+
 export class NowebPersistentStore implements INowebStore {
-  private socket: any;
+  private socket: ReturnType<typeof makeWASocket>;
   private chatRepo: IChatRepository;
+  private groupRepo: IGroupRepository;
   private contactRepo: IContactRepository;
   private messagesRepo: IMessagesRepository;
   private labelsRepo: ILabelsRepository;
@@ -39,12 +53,22 @@ export class NowebPersistentStore implements INowebStore {
   public presences: any;
   private lock: any;
 
+  private groupsFetchLock: any = new AsyncLock({
+    maxPending: Infinity,
+    maxExecutionTime: 60_000,
+  });
+
+  private lastTimeGroupUpdate: Date = new Date(0);
+  private lastTimeGroupFetch: Date = new Date(0);
+  private GROUP_METADATA_CACHE_TIME = 24 * HOUR;
+
   constructor(
     private logger: Logger,
     public storage: INowebStorage,
   ) {
     this.socket = null;
     this.chatRepo = storage.getChatRepository();
+    this.groupRepo = storage.getGroupRepository();
     this.contactRepo = storage.getContactsRepository();
     this.messagesRepo = storage.getMessagesRepository();
     this.labelsRepo = storage.getLabelsRepository();
@@ -85,6 +109,18 @@ export class NowebPersistentStore implements INowebStore {
     );
     ev.on('chats.delete', (data) =>
       this.withLock('chats', () => this.onChatDelete(data)),
+    );
+     // Groups
+    ev.on('groups.upsert', (data) =>
+      this.withLock('groups', () => this.onGroupUpsert(data)),
+    );
+    ev.on('groups.update', (data) =>
+      this.withLock('groups', () => this.onGroupUpdate(data)),
+    );
+    ev.on('group-participants.update', (data) =>
+      this.withLock(`group-${data.id}`, () =>
+        this.onGroupParticipantsUpdate(data),
+      ),
     );
     // Contacts
     ev.on('contacts.upsert', (data) =>
@@ -129,8 +165,8 @@ export class NowebPersistentStore implements INowebStore {
         await this.onContactsUpsert(contacts);
         this.logger.info(`history sync - '${contacts.length}' synced contacts`);
       }),
-      this.withLock('messages', () => this.syncMessagesHistory(messages)),
       this.withLock('chats', () => this.onChatUpsert(chats)),
+      this.withLock('messages', () => this.syncMessagesHistory(messages)),
     ]);
   }
 
@@ -195,7 +231,84 @@ export class NowebPersistentStore implements INowebStore {
       chat.conversationTimestamp = toNumber(chat.conversationTimestamp);
       await this.chatRepo.save(chat);
     }
-    this.logger.info(`history sync - '${chats.length}' synced chats`);
+    this.logger.info(`store sync - '${chats.length}' synced chats`);
+  }
+
+  private async onGroupUpsert(groups: GroupMetadata[]) {
+    for (const group of groups) {
+      await this.groupRepo.save(group);
+    }
+    this.logger.info(`store sync - '${groups.length}' synced groups`);
+  }
+
+  private async onGroupUpdate(groups: Partial<GroupMetadata>[]) {
+    for (const update of groups) {
+      let group = await this.groupRepo.getById(update.id);
+      group = Object.assign(group || {}, update) as GroupMetadata;
+      await this.groupRepo.save(group);
+    }
+    this.logger.info(`store sync - '${groups.length}' updated groups`);
+    this.lastTimeGroupUpdate = new Date();
+  }
+
+  private async onGroupParticipantsUpdate(data) {
+    const id: string = data.id;
+    const participants: string[] = data.participants;
+    const action: ParticipantAction = data.action;
+
+    if (action == 'remove') {
+      // Remove the group if the current user is removed
+      const myJid = this.socket?.authState?.creds?.me?.id;
+      const participantsIncludesMe = lodash.find(participants, (p) =>
+        areJidsSameUser(p, myJid),
+      );
+      if (participantsIncludesMe) {
+        await this.groupRepo.deleteById(id);
+        return;
+      }
+    }
+
+    let group = await this.groupRepo.getById(id);
+    if (!group) {
+      group = { id: id, participants: [] } as GroupMetadata;
+    }
+
+    const participantsById = new DefaultMap<string, GroupParticipant>((key) => {
+      return { id: key, admin: null } as GroupParticipant;
+    });
+    for (const participant of group.participants) {
+      participantsById.set(participant.id, participant);
+    }
+
+    for (const participant of participants) {
+      this.participantUpdate(participantsById, participant, action);
+    }
+    group.participants = Array.from(participantsById.values());
+    await this.groupRepo.save(group);
+  }
+
+  private participantUpdate(
+    participantsById: DefaultMap<string, GroupParticipant>,
+    participant: string,
+    action: ParticipantAction,
+  ) {
+    switch (action) {
+      case 'add':
+        // if there's no participant - add it (by id)
+        participantsById.get(participant);
+        break;
+      case 'remove':
+        // remove the participant (by id)
+        participantsById.delete(participant);
+        break;
+      case 'promote':
+        // set admin: admin
+        participantsById.get(participant).admin = 'admin';
+        break;
+      case 'demote':
+        participantsById.get(participant).admin = null;
+        break;
+    }
   }
 
   private async onChatUpdate(updates: ChatUpdate[]) {
@@ -324,20 +437,67 @@ export class NowebPersistentStore implements INowebStore {
     return proto.WebMessageInfo.fromObject(data);
   }
 
-  getMessagesByJid(chatId: string, limit: number) {
-    return this.messagesRepo.getAllByJid(toJID(chatId), toNumber(limit));
+  getMessagesByJid(
+    chatId: string,
+    filter: GetChatMessagesFilter,
+    pagination: PaginationParams,
+  ): Promise<any> {
+    pagination.sortBy = 'messageTimestamp';
+    pagination.sortOrder = SortOrder.DESC;
+    return this.messagesRepo.getAllByJid(chatId, filter, pagination);
   }
 
-  getChats(limit?: number, offset?: number): Promise<Chat[]> {
-    return this.chatRepo.getAllWithMessages(limit, offset);
+  getMessageById(chatId: string, messageId: string): Promise<any> {
+    return this.messagesRepo.getByJidById(chatId, messageId);
+  }
+
+  getChats(pagination: PaginationParams, broadcast: boolean): Promise<Chat[]> {
+    pagination.sortBy ||= 'conversationTimestamp';
+    pagination.sortOrder ||= SortOrder.DESC;
+    return this.chatRepo.getAllWithMessages(pagination, broadcast);
+  }
+
+  private shouldFetchGroup(): boolean {
+    const timePassed = new Date().getTime() - this.lastTimeGroupFetch.getTime();
+    return timePassed > this.GROUP_METADATA_CACHE_TIME;
+  }
+
+  private async fetchGroups() {
+    await this.groupsFetchLock.acquire('groups-fetch', async () => {
+      if (!this.shouldFetchGroup()) {
+        // Update has been done by another request
+        return;
+      }
+      const lastTimeGroupUpdate = this.lastTimeGroupUpdate;
+      await this.groupRepo.deleteAll();
+      await this.socket?.groupFetchAllParticipating();
+      // Wait until the groups update is done
+      await waitUntil(
+        async () => this.lastTimeGroupUpdate > lastTimeGroupUpdate,
+        100,
+        5_000,
+      );
+      this.lastTimeGroupFetch = new Date();
+    });
+  }
+
+  resetGroupsCache() {
+    this.lastTimeGroupFetch = new Date(0);
+  }
+
+  async getGroups(pagination: PaginationParams): Promise<GroupMetadata[]> {
+    if (this.shouldFetchGroup()) {
+      await this.fetchGroups();
+    }
+    return this.groupRepo.getAll(pagination);
   }
 
   getContactById(jid) {
     return this.contactRepo.getById(jid);
   }
 
-  getContacts() {
-    return this.contactRepo.getAll();
+  getContacts(pagination: PaginationParams) {
+    return this.contactRepo.getAll(pagination);
   }
 
   getLabels(): Promise<Label[]> {

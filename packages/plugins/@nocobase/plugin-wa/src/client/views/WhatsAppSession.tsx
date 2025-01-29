@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react';
 import WhatsAppClone from './WhatsAppClone';
 import WhatsAppQRCodeModal from './WhatsAppQRCodeModal';
 import { useApp } from '@nocobase/client';
+import { useRequest } from '@nocobase/client';
 
 const WhatsAppSession = () => {
   const [qrCode, setQrCode] = useState<string | null>(null);
@@ -70,6 +71,16 @@ const WhatsAppSession = () => {
     }
   }, [selectedChatId]);
 
+  const sessionStartSent = useRef(false);
+
+
+  // const { data: sessionStatus, loading: sessionLoading } = useRequest({
+  //   url: '/wasessions:get',
+  //   method: 'GET',
+  // });
+
+  //console.log("waha session status:",sessionStatus);
+
   useEffect(() => {
     if (!wsClient.current || !wsClient.current.on) {
       console.error('WebSocket client is not available or not connected properly');
@@ -81,10 +92,11 @@ const WhatsAppSession = () => {
    // sessionStarted.current = true;
 
     // Start the WhatsApp session
-    //if(!sessionStarted){
+    if (!sessionStartSent.current) {
       wsClient.current.send(JSON.stringify({ type: 'start-session', sessionId: sessionId }));
-      setSessionStarted(true); // Ensure session is marked as started
-    //}
+      sessionStartSent.current = true;
+      setSessionStarted(true);
+    }
 
     const messageHandler = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
@@ -127,7 +139,8 @@ const WhatsAppSession = () => {
           updateChatsWithNewMessage(data.message.to, data.message);
           break;
         case 'messages':
-          console.log('Loaded messages:', data.messages);
+          console.log('Loaded messages:', data.chatId ,selectedChatId);
+
           if (data.chatId === selectedChatId) {
             setChatMessages(data.messages);
         //     setChatMessages((prevMessages) => [
@@ -159,7 +172,14 @@ const WhatsAppSession = () => {
     return () => {
       wsClient.current.off('message', messageHandler);
     };
-  }, [selectedChatId, updateChatsWithNewMessage,sessionStarted]);
+  }, [selectedChatId]);
+
+  // useEffect(() => {
+  //   if (selectedChatId && chatMessages.length === 0) {
+  //     loadMessages(selectedChatId);
+  //   }
+  // }, [selectedChatId]);
+  //selectedChatId, updateChatsWithNewMessage
 
   // Handler for replying to a message
   const handleReplyToMessage = (message) => {

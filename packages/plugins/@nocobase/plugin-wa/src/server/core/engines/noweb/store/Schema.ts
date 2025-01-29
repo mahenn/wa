@@ -1,24 +1,5 @@
-export class Field {
-  constructor(
-    public fieldName: string,
-    public type: string,
-  ) {}
-}
+import { Field, Index, Schema } from '../../../storage/sqlite3/Schema';
 
-export class Index {
-  constructor(
-    public name: string,
-    public columns: string[],
-  ) {}
-}
-
-export class Schema {
-  constructor(
-    public name: string,
-    public columns: Field[],
-    public indexes: Index[],
-  ) {}
-}
 
 export const NOWEB_STORE_SCHEMA = [
   new Schema(
@@ -37,6 +18,11 @@ export const NOWEB_STORE_SCHEMA = [
       new Index('chats_id_index', ['id']),
       new Index('chats_conversationTimestamp_index', ['conversationTimestamp']),
     ],
+  ),
+  new Schema(
+    'groups',
+    [new Field('id', 'TEXT'), new Field('data', 'TEXT')],
+    [new Index('groups_id_index', ['id'])],
   ),
   new Schema(
     'messages',

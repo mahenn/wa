@@ -19,7 +19,10 @@ import { WhatsappConfigService } from './config.service';
 import { SessionManagerCore } from './core/manager.core';
 import { EngineConfigService } from './core/config/EngineConfigService';
 import { MediaLocalStorageConfig } from './core/media/local/MediaLocalStorageConfig';
+import { WebJSEngineConfigService } from './core/config/WebJSEngineConfigService';
+import { MediaLocalStorageConfig } from './core/media/local/MediaLocalStorageConfig';
 
+import { MediaLocalStorageFactory } from './core/media/local/MediaLocalStorageFactory';
 import { sessionMiddleware } from './middlewares/session';
 import { SessionManagerCore } from './core/manager.core';
 
@@ -54,20 +57,33 @@ export class PluginWaServer extends Plugin {
 
     this.startTimestamp = Date.now();
 
-    const Logger = new PinoLogger({
+    const logger = new PinoLogger({
       pinoHttp: {
         level: 'info',
         name: 'WhatsAppPlugin'
       }
     });
+    logger.setContext('WhatsAppPlugin'); // Set context before passing to SessionManager
 
     this.engineConfig = new EngineConfigService();
     this.configService = new WhatsappConfigService();
-    this.sessionManager = new SessionManagerCore(this.configService,this.engineConfig,Logger);
+    const mediaLocalStorageConfig = new MediaLocalStorageConfig(this.configService);
+    const webjsEngineConfigService = new WebJSEngineConfigService();
+    
+    // Initialize Media Storage Factory
+    const mediaStorageFactory = new MediaLocalStorageFactory(mediaLocalStorageConfig);
+
+
+
+    this.sessionManager = new SessionManagerCore(this.configService,
+                                                  this.engineConfig,
+                                                  webjsEngineConfigService,
+                                                  logger,
+                                                  mediaStorageFactory);
     
     this.app.sessionManager = this.sessionManager;
 
-    console.log(this.sessionManager);
+    //console.log(this.sessionManager);
 
     // Handle session startup
     // this.app.on('beforeStart', async () => {
@@ -100,6 +116,21 @@ export class PluginWaServer extends Plugin {
 
     console.log('Client connected to WebSocket');
 
+
+
+    // const sub = this.sessionManager.getSessionEvents("default", '*')
+    //   .subscribe((data) => {
+    //     this.logger.debug(`Sending data to client, event.id: ${data.id}`, data);
+    //     socket.send(JSON.stringify(data), (err) => {
+    //       if (!err) {
+    //         return;
+    //       }
+    //       this.logger.error(`Error sending data to client: ${err}`);
+    //     });
+    //   });
+
+
+
     //await this.initializeOrReuseSession(socket, "phone-123");
 
     const messageHandler = async (message: string) => {
@@ -107,7 +138,7 @@ export class PluginWaServer extends Plugin {
         try {
           parsedMessage = JSON.parse(message);
         } catch (error) {
-          console.error('Non-JSON message received:', message);
+          //console.error('Non-JSON message received:', message);
           return;
         }
 
@@ -122,7 +153,6 @@ export class PluginWaServer extends Plugin {
         }
 
 
-
         switch (type) {
           case 'start-session':           
               console.log('Session already exists:', sessionId);
@@ -135,7 +165,7 @@ export class PluginWaServer extends Plugin {
             break;
 
           case 'get-messages':
-            //await this.fetchMessagesForChat(socket, chatId, sessionId,offset);
+            await this.fetchMessagesForChat(socket, chatId, sessionId,offset);
             break;
 
           case 'send-message':
@@ -176,6 +206,8 @@ export class PluginWaServer extends Plugin {
 
       socket.on('close', () => {
         console.log('WebSocket client disconnected');
+        //sub.unsubscribe();
+        // this.sessionManager.stop("default", true);
         socket.removeListener('message', messageHandler);
       });
 
@@ -358,6 +390,10 @@ export class PluginWaServer extends Plugin {
         getChats: {
           method: 'get',
           handler: chatsController.getChats
+        },
+        chatsummary: {
+          method: 'get',
+          handler: chatsController.getChatsOverview
         },
         deleteChat: {
           method: 'delete',
@@ -637,32 +673,98 @@ export class PluginWaServer extends Plugin {
     const client = await this.sessionManager.getSession(sessionId);
 
     try {
-      const query: GetChatsQuery = { limit: 100, offset: 0  };
+      // const pagination: ChatsPaginationParams = { limit: 100, offset: 0  };
+      // const chats =  await client.getChats(pagination);
 
-      const chats = await client.getChats(query);
-      console.log(chats);
-      //const chats = await client.getChats();
-      //chats.sendSeen();
+      const pagination: OverviewPaginationParams = { limit: 10, offset: 0  };
+      const chats: ChatSummary[] = await client.getChatsOverview(pagination);
+
       console.log(`Chats for sessionId: ${sessionId}`, chats.length);
       if (socket.readyState === WebSocket.OPEN) {
-        socket.send(JSON.stringify({
-          type: 'chats',
-          chats,
-        }));
+        socket.send(JSON.stringify({type: 'chats',chats,}));
       }
     } catch (error) {
       console.log(client);
       console.error(`Error fetching chats for sessionId: ${sessionId}`, error.message);
+    }
+  }
 
-      //await this.initializeOrReuseSession(socket, sessionId);
+
+  private async fetchMessagesForChat(socket: WebSocket, chatId: string, sessionId: string, offset = 0) {
+    
+    const client = await this.sessionManager.getSession(sessionId);
+
+    try {
+      //const chat = await client.getChatMessages(chatId);
+
+      const query = {
+        session: sessionId ,
+        limit: 100,
+        downloadMedia: true
+      };
+
+      //const query: GetChatMessagesQuery = null;
+      const filter = '';
+
+      //const messages = await client.getChatMessages(chatId, query.limit, query.downloadMedia);
+      const messages = await client.getChatMessages(chatId, query, filter)
 
 
-      // if (socket.readyState === WebSocket.OPEN) {
-      //   socket.send(JSON.stringify({
-      //     type: 'error',
-      //     message: 'Error fetching chats.',
-      //   }));
-      // }
+
+      console.error(`fetching messages for offset now: ${offset}`,messages.length);
+
+      const processedMessages = await Promise.all(
+        messages.map(async (message) => {
+          let reactions = [];
+          if (message.hasReaction) {
+            try {
+              reactions = await message.getReactions();
+            } catch (error) {
+              console.error(`Error fetching reactions for message: ${message.id._serialized}`, error);
+            }
+          }
+
+          if (message.hasMedia) {
+            try {
+              const media = await message.downloadMedia();
+               return {
+              ...message,
+              mediaData: media && media.data ? media.data : null, // Base64-encoded media data or null
+              mediaType: media && media.mimetype ? media.mimetype : null, // Mime type or null
+            };
+          } catch (error) {
+            //console.error(`Error downloading media for message: ${message.id._serialized}`, error);
+            return {
+              ...message,
+              mediaData: null,
+              mediaType: null,
+                reactions
+              };
+            }
+          }
+
+          return {
+            ...message,
+            reactions, // Add reactions if available
+          };
+        })
+      );
+
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'messages',
+          chatId,
+          messages: processedMessages, // Send processed messages including media data
+        }));
+      }
+    } catch (error) {
+      console.error(`Error fetching messages for chatId: ${chatId}`, error.message);
+      if (socket.readyState === WebSocket.OPEN) {
+        socket.send(JSON.stringify({
+          type: 'error',
+          message: 'Error fetching messages.',
+        }));
+      }
     }
   }
 

@@ -1,11 +1,12 @@
 import { WAMessage } from '@adiwajshing/baileys';
 import { LabelAssociation } from '@adiwajshing/baileys/src/Types/LabelAssociation';
+import { IGroupRepository } from './IGroupRepository';
 import { ILabelAssociationRepository } from './ILabelAssociationsRepository';
 import { ILabelsRepository } from './ILabelsRepository';
-
 import { IChatRepository } from './IChatRepository';
 import { IContactRepository } from './IContactRepository';
 import { IMessagesRepository } from './IMessagesRepository';
+
 
 export abstract class INowebStorage {
   abstract init(): Promise<void>;
@@ -15,6 +16,8 @@ export abstract class INowebStorage {
   abstract getContactsRepository(): IContactRepository;
 
   abstract getChatRepository(): IChatRepository;
+
+  abstract getGroupRepository(): IGroupRepository;
 
   abstract getMessagesRepository(): IMessagesRepository;
 

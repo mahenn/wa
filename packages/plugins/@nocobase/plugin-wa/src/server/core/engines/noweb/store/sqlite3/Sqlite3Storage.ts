@@ -1,12 +1,14 @@
 import { WAMessage } from '@adiwajshing/baileys';
 import { LabelAssociation } from '@adiwajshing/baileys/src/Types/LabelAssociation';
 import { ILabelAssociationRepository } from '../ILabelAssociationsRepository';
+import { Sqlite3GroupRepository } from './Sqlite3GroupRepository';
 import { ILabelsRepository } from '../ILabelsRepository';
 import { Sqlite3LabelAssociationsRepository } from './Sqlite3LabelAssociationsRepository';
 import { Sqlite3LabelsRepository } from './Sqlite3LabelsRepository';
+import { Field, Index, NOWEB_STORE_SCHEMA, Schema } from '../../../../storage/Schema';
 
 import { INowebStorage } from '../INowebStorage';
-import { Field, Index, NOWEB_STORE_SCHEMA, Schema } from '../Schema';
+import { NOWEB_STORE_SCHEMA } from '../Schema';
 import { Sqlite3ChatRepository } from './Sqlite3ChatRepository';
 import { Sqlite3ContactRepository } from './Sqlite3ContactRepository';
 import { Sqlite3MessagesRepository } from './Sqlite3MessagesRepository';
@@ -21,7 +23,8 @@ export class Sqlite3Storage extends INowebStorage {
 
   constructor(filePath: string) {
     super();
-    this.db = new Database(filePath);
+    this.db = new Database('./my-database.db');
+    console.log("db file path is ",filePath);
     this.tables = NOWEB_STORE_SCHEMA;
   }
 
@@ -59,6 +62,13 @@ export class Sqlite3Storage extends INowebStorage {
     );
     this.db.exec(
       'CREATE INDEX IF NOT EXISTS chats_conversationTimestamp_index ON chats (conversationTimestamp)',
+    );
+     // Groups
+    this.db.exec(
+      'CREATE TABLE IF NOT EXISTS groups (id TEXT PRIMARY KEY, data TEXT)',
+    );
+    this.db.exec(
+      'CREATE UNIQUE INDEX IF NOT EXISTS groups_id_index ON groups (id)',
     );
 
     // Messages
@@ -116,6 +126,10 @@ export class Sqlite3Storage extends INowebStorage {
 
   getChatRepository() {
     return new Sqlite3ChatRepository(this.db, this.getSchema('chats'));
+  }
+
+  getGroupRepository() {
+    return new Sqlite3GroupRepository(this.db, this.getSchema('groups'));
   }
 
   getLabelsRepository(): ILabelsRepository {

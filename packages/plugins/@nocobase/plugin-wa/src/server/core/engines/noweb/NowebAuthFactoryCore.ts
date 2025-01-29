@@ -9,6 +9,7 @@ export class NowebAuthFactoryCore {
   }
 
   protected async buildLocalAuth(store: LocalStore, name: string) {
+    console.log("store name ...............................",name);
     await store.init(name);
     const authFolder = store.getSessionDirectory(name);
     const { state, saveCreds } = await useMultiFileAuthState(authFolder);

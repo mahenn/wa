@@ -3,22 +3,46 @@ import {
   CreateChannelRequest,
   ListChannelsQuery,
 } from '../../structures/channels.dto';
-import { GetChatsQuery } from '../../structures/chats.dto';
-import { Label, LabelID } from '../../structures/labels.dto';
+import { ChatSummary,
+  GetChatMessageQuery,
+  GetChatMessagesFilter,
+  GetChatMessagesQuery } from '../../structures/chats.dto';
+import { SendButtonsRequest } from '../../structures/chatting.buttons.dto';
+import { Label, LabelDTO, LabelID }  from '../../structures/labels.dto';
+import { PaginationParams } from '../../structures/pagination.dto';
+import { WAMessage } from '../../structures/responses.dto';
+import { DefaultMap } from '../../utils/DefaultMap';
+import { generatePrefixedId } from '../../utils/ids';
 import { LoggerBuilder } from '../../utils/logging';
-import { EventEmitter } from 'events';
+import { complete } from '../../utils/reactive/complete';
+import { SwitchObservable } from '../../utils/reactive/SwitchObservable';
+
 import * as fs from 'fs';
+import * as lodash from 'lodash';
+import NodeCache from 'node-cache';
 //import { createLogger, Logger, LoggerOptions } from '@nocobase/logger';
 import { Logger } from 'pino';
+import {
+  BehaviorSubject,
+  catchError,
+  delay,
+  filter,
+  of,
+  retry,
+  share,
+  Subject,
+  switchMap,
+} from 'rxjs';
+import { distinctUntilChanged, map } from 'rxjs/operators';
 import { MessageId } from 'whatsapp-web.js';
 
 import {
   ChatRequest,
   CheckNumberStatusQuery,
   EditMessageRequest,
-  GetMessageQuery,
   MessageContactVcardRequest,
   MessageFileRequest,
+  MessageForwardRequest,
   MessageImageRequest,
   MessageLinkPreviewRequest,
   MessageLocationRequest,
@@ -39,6 +63,7 @@ import {
 } from '../../structures/enums.dto';
 import {
   CreateGroupRequest,
+  GroupsPaginationParams,
   ParticipantsRequest,
   SettingsSecurityChangeInfo,
 } from '../../structures/groups.dto';
@@ -82,9 +107,6 @@ export function ensureSuffix(phone) {
   return phone + suffix;
 }
 
-export enum WAHAInternalEvent {
-  ENGINE_START = 'engine.start',
-}
 
 export interface SessionParams {
   name: string;
@@ -98,7 +120,7 @@ export interface SessionParams {
 }
 
 export abstract class WhatsappSession {
-  public events: EventEmitter;
+  
   public engine: WAHAEngine;
 
   public name: string;
@@ -109,9 +131,15 @@ export abstract class WhatsappSession {
   protected proxyConfig?: ProxyConfig;
   public sessionConfig?: SessionConfig;
   protected engineConfig?: any;
+  protected unpairing: boolean = false;
 
   private _status: WAHASessionStatus;
   private shouldPrintQR: boolean;
+  protected events2: DefaultMap<WAHAEvents, SwitchObservable<any>>;
+  private status$: Subject<WAHASessionStatus>;
+  protected profilePictures: NodeCache = new NodeCache({
+    stdTTL: 24 * 60 * 60, // 1 day
+  });
 
   public constructor({
     name,
@@ -123,11 +151,64 @@ export abstract class WhatsappSession {
     sessionConfig,
     engineConfig,
   }: SessionParams) {
-    this.events = new EventEmitter();
+    this.status$ = new BehaviorSubject(null);
     this.name = name;
     this.proxyConfig = proxyConfig;
     this.loggerBuilder = loggerBuilder;
     this.logger = loggerBuilder.child({ name: 'WhatsappSession' });
+
+    this.events2 = new DefaultMap<WAHAEvents, SwitchObservable<any>>(
+      (key) =>
+        new SwitchObservable((obs$) => {
+          return obs$.pipe(
+            catchError((err) => {
+              this.logger.error(
+                `Caught error, dropping value from, event: '${key}'`,
+              );
+              this.logger.error(err, err.stack);
+              throw err;
+            }),
+            filter(Boolean),
+            map((data) => {
+              data._eventId = generatePrefixedId('evt');
+              return data;
+            }),
+            retry(),
+            share(),
+          );
+        }),
+    );
+
+    this.events2.get(WAHAEvents.SESSION_STATUS).switch(
+      this.status$
+        // initial value is null
+        .pipe(filter(Boolean))
+        // Wait for WORKING status to get all the info
+        // https://github.com/devlikeapro/waha/issues/409
+        .pipe(
+          switchMap((status: WAHASessionStatus) => {
+            const me = this.getSessionMeInfo();
+            const hasMe = !!me?.pushName && !!me?.id;
+            // Delay WORKING by 1 second if condition is met
+            // Usually we get WORKING with all the info after
+            if (status === WAHASessionStatus.WORKING && !hasMe) {
+              return of(status).pipe(delay(2000));
+            }
+            return of(status);
+          }),
+          // Remove consecutive duplicate WORKING statuses
+          distinctUntilChanged(
+            (prev, curr) => prev === curr && curr === WAHASessionStatus.WORKING,
+          ),
+        )
+        // Populate the session info
+        .pipe(
+          map<WAHASessionStatus, WASessionStatusBody>((status) => {
+            return { name: this.name, status: status };
+          }),
+        ),
+    );
+
     this.sessionStore = sessionStore;
     this.mediaManager = mediaManager;
     this.sessionConfig = sessionConfig;
@@ -143,10 +224,20 @@ export abstract class WhatsappSession {
 
   }
 
+  public getEventObservable(event: WAHAEvents) {
+    return this.events2.get(event);
+  }
+
+
   protected set status(value: WAHASessionStatus) {
+    if (this.unpairing && value !== WAHASessionStatus.STOPPED) {
+      // In case of unpairing
+      // wait for STOPPED event, ignore the rest
+      return;
+    }
     this._status = value;
-    const body: WASessionStatusBody = { name: this.name, status: value };
-    this.events.emit(WAHAEvents.SESSION_STATUS, body);
+    this.status$.next(value);
+
   }
 
   public get status() {
@@ -164,43 +255,49 @@ export abstract class WhatsappSession {
     // https://github.com/wppconnect-team/wppconnect/issues/1326
     // https://www.bannerbear.com/blog/ways-to-speed-up-puppeteer-screenshots/
     return [
-    // '--aggressive-cache-discard',
-    // '--disable-accelerated-2d-canvas',
-    // '--disable-application-cache',
-    // '--disable-background-networking',
-    // '--disable-cache',
-    // '--disable-client-side-phishing-detection',
-    // '--disable-component-update',
-    // '--disable-default-apps',
-    // '--disable-dev-shm-usage',
-    // '--disable-extensions',
-    // '--disable-gpu',
-    // '--disable-popup-blocking',
-    // '--disable-setuid-sandbox',
-    // '--disable-site-isolation-trials',
-    // '--disable-speech-api',
-    // '--disable-sync',
-    // '--disable-translate',
-    // '--disk-cache-size=0',
-    // '--hide-scrollbars',
-    // '--ignore-certificate-errors',
-    // '--ignore-ssl-errors',
-     '--no-sandbox',
-    // '--disable-ukm-database', // Disable UKM database
-    // '--remote-debugging-port=0', // Disable DevTools listening
-    // '--password-store=basic',
-    // '--disable-features=UKMDatabase,AutofillServerCommunication,PasswordManager',
-    //'--renderer-process-limit=2',
-    // '--safebrowsing-disable-auto-update',
-    // '--use-mock-keychain',
-    // '--disable-top-sites',
-    // '--disable-history-db',
-    // '--disable-sync',
-    // '--disable-translate',
-    // '--disable-background-networking',
-    // '--disable-default-apps',
-    // '--disable-client-side-phishing-detection',
-    // '--disable-component-update',
+    '--aggressive-cache-discard',
+      '--disable-accelerated-2d-canvas',
+      '--disable-application-cache',
+      '--disable-background-networking',
+      // DO NOT disable software rasterizer, it will break the video
+      // https://github.com/devlikeapro/waha/issues/629
+      // '--disable-software-rasterizer',
+      '--disable-cache',
+      '--disable-client-side-phishing-detection',
+      '--disable-component-update',
+      '--disable-default-apps',
+      '--disable-dev-shm-usage',
+      '--disable-extensions',
+      '--disable-features=site-per-process',
+      '--disable-gpu',
+      '--disable-offer-store-unmasked-wallet-cards',
+      '--disable-offline-load-stale-cache',
+      '--disable-popup-blocking',
+      '--disable-setuid-sandbox',
+      '--disable-site-isolation-trials', // https://superuser.com/questions/654565/how-to-run-google-chrome-in-a-single-process
+      '--disable-speech-api',
+      '--disable-sync',
+      '--disable-translate',
+      '--disable-web-security',
+      '--disk-cache-size=0',
+      '--hide-scrollbars',
+      '--ignore-certificate-errors',
+      '--ignore-ssl-errors',
+      // https://github.com/devlikeapro/waha/issues/725
+      // '--in-process-gpu', // https://superuser.com/questions/654565/how-to-run-google-chrome-in-a-single-process
+      '--metrics-recording-only',
+      '--mute-audio',
+      '--no-default-browser-check',
+      '--no-first-run',
+      '--no-pings',
+      '--no-sandbox',
+      '--no-zygote',
+      '--password-store=basic',
+      '--renderer-process-limit=2', // https://superuser.com/questions/654565/how-to-run-google-chrome-in-a-single-process
+      '--safebrowsing-disable-auto-update',
+      // '--single-process',
+      '--use-mock-keychain',
+      '--window-size=1280,720',
     ];
   }
 
@@ -214,24 +311,14 @@ export abstract class WhatsappSession {
   /** Stop the session */
   abstract stop(): Promise<void>;
 
-  /** Subscribe the handler to specific hook */
-  subscribeSessionEvent(
-    hook: WAHAEvents | string,
-    handler: (message) => void,
-  ): boolean {
-    switch (hook) {
-      case WAHAEvents.SESSION_STATUS:
-        this.events.on(WAHAEvents.SESSION_STATUS, handler);
-        return true;
-      default:
-        return false;
-    }
+  protected stopEvents() {
+    complete(this.events2);
   }
 
-  abstract subscribeEngineEvent(
-    hook: WAHAEvents | string,
-    handler: (message) => void,
-  ): boolean;
+  /* Unpair the account */
+  async unpair(): Promise<void> {
+    return;
+  }
 
   /**
    * START - Methods for API
@@ -288,6 +375,8 @@ export abstract class WhatsappSession {
     throw new NotImplementedByEngineError();
   }
 
+  abstract forwardMessage(request: MessageForwardRequest): Promise<WAMessage>;
+
   abstract sendImage(request: MessageImageRequest);
 
   abstract sendFile(request: MessageFileRequest);
@@ -295,6 +384,10 @@ export abstract class WhatsappSession {
   abstract sendVoice(request: MessageVoiceRequest);
 
   sendVideo(request: MessageVideoRequest) {
+    throw new NotImplementedByEngineError();
+  }
+
+  sendButtons(request: SendButtonsRequest) {
     throw new NotImplementedByEngineError();
   }
 
@@ -306,9 +399,7 @@ export abstract class WhatsappSession {
 
   abstract stopTyping(chat: ChatRequest);
 
-  getMessages(query: GetMessageQuery) {
-    throw new NotImplementedByEngineError();
-  }
+  
 
   abstract setReaction(request: MessageReactionRequest);
 
@@ -319,7 +410,13 @@ export abstract class WhatsappSession {
   /**
    * Chats methods
    */
-  public getChats(query: GetChatsQuery) {
+  public getChats(pagination: PaginationParams) {
+    throw new NotImplementedByEngineError();
+  }
+
+  public getChatsOverview(
+    pagination: PaginationParams,
+  ): Promise<ChatSummary[]> {
     throw new NotImplementedByEngineError();
   }
 
@@ -329,9 +426,29 @@ export abstract class WhatsappSession {
 
   public getChatMessages(
     chatId: string,
-    limit: number,
-    downloadMedia: boolean,
+    query: GetChatMessagesQuery,
+    filter: GetChatMessagesFilter,
   ) {
+    throw new NotImplementedByEngineError();
+  }
+
+  public getChatMessage(
+    chatId: string,
+    messageId: string,
+    query: GetChatMessageQuery,
+  ): Promise<null | WAMessage> {
+    throw new NotImplementedByEngineError();
+  }
+
+  public pinMessage(
+    chatId: string,
+    messageId: string,
+    duration: number,
+  ): Promise<boolean> {
+    throw new NotImplementedByEngineError();
+  }
+
+  public unpinMessage(chatId: string, messageId: string): Promise<boolean> {
     throw new NotImplementedByEngineError();
   }
 
@@ -359,13 +476,34 @@ export abstract class WhatsappSession {
     throw new NotImplementedByEngineError();
   }
 
+  public chatsUnreadChat(chatId: string): Promise<any> {
+    throw new NotImplementedByEngineError();
+  }
+
   /**
    * Labels methods
    */
+  public async getLabel(labelId: string): Promise<Label | undefined> {
+    const labels = await this.getLabels();
+    return lodash.find(labels, { id: labelId });
+  }
 
   public getLabels(): Promise<Label[]> {
     throw new NotImplementedByEngineError();
   }
+
+  public async createLabel(label: LabelDTO): Promise<Label> {
+    throw new NotImplementedByEngineError();
+  }
+
+  public async updateLabel(label: Label): Promise<Label> {
+    throw new NotImplementedByEngineError();
+  }
+
+  public async deleteLabel(label: Label): Promise<void> {
+    throw new NotImplementedByEngineError();
+  }
+
 
   public getChatsByLabelId(labelId: string) {
     throw new NotImplementedByEngineError();
@@ -386,7 +524,7 @@ export abstract class WhatsappSession {
     throw new NotImplementedByEngineError();
   }
 
-  public getContacts() {
+  public getContacts(pagination: PaginationParams) {
     throw new NotImplementedByEngineError();
   }
 
@@ -394,8 +532,33 @@ export abstract class WhatsappSession {
     throw new NotImplementedByEngineError();
   }
 
-  public getContactProfilePicture(query: ContactQuery) {
-    throw new NotImplementedByEngineError();
+  /**
+   * Fetch the latest profile picture of the contact (group, newsletter, etc.)
+   * @param id
+   */
+  abstract fetchContactProfilePicture(id: string): Promise<string | null>;
+
+  public async getContactProfilePicture(
+    id: string,
+    refresh: boolean,
+  ): Promise<string | null> {
+    const has: boolean = this.profilePictures.has(id);
+    if (!has || refresh) {
+      await this.refreshProfilePicture(id);
+    }
+    return this.profilePictures.get(id);
+  }
+
+  protected async refreshProfilePicture(id: string) {
+    this.profilePictures.del(id);
+    // const url = await this.fetchContactProfilePicture(id).catch((err) => {
+    //   this.logger.error('Error fetching profile picture');
+    //   this.logger.error(err, err.stack);
+    //   return null;
+    // });
+    const url = 'https://www.shutterstock.com/shutterstock/photos/2063335577/display_1500/stock-vector-block-contact-icon-vector-avatar-blocked-symbol-2063335577.jpg';//@mahen 
+    this.profilePictures.set(id, url);
+    return url;
   }
 
   public blockContact(request: ContactRequest) {
@@ -413,7 +576,19 @@ export abstract class WhatsappSession {
     throw new NotImplementedByEngineError();
   }
 
-  public getGroups() {
+  public joinGroup(code: string): Promise<string> {
+    throw new NotImplementedByEngineError();
+  }
+
+  public joinInfoGroup(code: string): Promise<any> {
+    throw new NotImplementedByEngineError();
+  }
+
+  public getGroups(pagination: PaginationParams) {
+    throw new NotImplementedByEngineError();
+  }
+
+  public refreshGroups(): Promise<boolean> {
     throw new NotImplementedByEngineError();
   }
 

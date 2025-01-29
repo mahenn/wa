@@ -43,6 +43,7 @@
     "rimraf": "^3.0.2",
     "rxjs": "^7.1.0",
     "sharp": "^0.33.4",
+    "ulid": "^2.3.0",
     "whatsapp-web.js": "github:devlikeapro/whatsapp-web.js#fork-webpack-exodus-channels"
   },
   "peerDependencies": {

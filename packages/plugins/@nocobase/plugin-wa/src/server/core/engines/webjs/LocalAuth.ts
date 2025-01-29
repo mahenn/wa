@@ -74,7 +74,7 @@ export class LocalAuth implements AuthStrategy {
   private async removeSingletonFiles(dir: string) {
     const files = await fs.promises.readdir(dir);
     for (const file of files) {
-      if (file.startsWith('SingletonLock')) {
+      if (file.startsWith('Singleton')) {
         const filePath = path.join(dir, file);
         try {
           await fs.promises.rm(filePath, {

@@ -77,6 +77,12 @@ export class NowebConfig {
   @Type(() => NowebStoreConfig)
   @IsOptional()
   store?: NowebStoreConfig;
+
+  @ApiProperty({
+    description: 'Mark the session as online when it connects to the server.',
+  })
+  @IsBoolean()
+  markOnline: boolean = true;
 }
 
 export class SessionConfig {
@@ -149,6 +155,10 @@ export class MeInfo {
 
 export class SessionInfo extends SessionDTO {
   me?: MeInfo;
+  assignedWorker?: string;
+}
+
+export class SessionDetailedInfo extends SessionInfo {
   engine?: any;
 }
 

@@ -4,7 +4,7 @@ export interface LoggerBuilder {
   child(bindings: Record<string, any>, options?: ChildLoggerOptions): Logger;
 }
 
-function getNestJSLogLevels()  {
+function getNestJSLogLevels(): LogLevel[] {
   const level = getPinoLogLevel();
   switch (level) {
     case 'trace':
@@ -24,10 +24,14 @@ function getNestJSLogLevels()  {
 
 export function getPinoLogLevel(debug: boolean = false): Level {
   const enableDebug = process.env.DEBUG != undefined || debug;
+  const level = getDefaultPinoLogLevel();
+  if (level === 'trace') {
+    return 'trace';
+  }
   if (enableDebug) {
     return 'debug';
   }
-  return getDefaultPinoLogLevel();
+  return level;
 }
 
 export function isDebugEnabled() {

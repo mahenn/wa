@@ -138,7 +138,8 @@ const renderMessageContent = (message) => {
   const formattedText = parseWhatsAppFormatting(message.body);
 
   // Check for chat message with no media
-  if (message.type === 'chat') {
+  //message.type === 'chat'
+  if (!message.hasMedia) {
     return (
       <>
         {renderForwardedMessage(message)}
@@ -314,7 +315,7 @@ const ChatWindow = ({ chatMessages, onReplyToMessage,onReactToMessage, selectedC
     return () => {
       container?.removeEventListener('scroll', handleScroll);
     };
-  }, [ loadingOlderMessages,offset]);
+  }, [ loadingOlderMessages,offset,selectedChatId]);
 
 
 

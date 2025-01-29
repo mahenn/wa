@@ -1,4 +1,6 @@
-import { createLogger,Logger,LoggerOptions } from '@nocobase/logger';
+import { Logger } from '@nestjs/common';
+
+//import { createLogger,Logger,LoggerOptions } from '@nocobase/logger';
 import { parseBool } from '../../helpers';
 import { WAHAEngine } from '../../structures/enums.dto';
 import { getEngineName } from '../../version';
@@ -8,11 +10,14 @@ export class EngineConfigService {
   private logger: Logger;
 
   constructor() {
-    this.logger =  createLogger({
-      name: 'EngineConfigService',
-      transports: ['console'],
-      level: 'info'
-    } as LoggerOptions);
+    // this.logger =  createLogger({
+    //   name: 'EngineConfigService',
+    //   transports: ['console'],
+    //   level: 'info'
+    // } as LoggerOptions);
+
+    this.logger = new Logger('EngineConfigService');
+    
   }
 
   

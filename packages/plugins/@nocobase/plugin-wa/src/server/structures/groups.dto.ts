@@ -1,6 +1,14 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsString } from 'class-validator';
+import { Transform } from 'class-transformer';
+import {
+  IsArray,
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+} from 'class-validator';
 
+import { PaginationParams } from './pagination.dto';
 /**
  * Structures
  */
@@ -45,4 +53,36 @@ export class CreateGroupRequest {
 
   @IsArray()
   participants: Array<Participant>;
+}
+
+export class JoinGroupRequest {
+  @ApiProperty({
+    description: 'Group code (123) or url (https://chat.whatsapp.com/123)',
+    example: 'https://chat.whatsapp.com/1234567890abcdef',
+  })
+  @IsString()
+  code: string;
+}
+
+export class JoinGroupResponse {
+  @ApiProperty({
+    description: 'Group ID',
+    example: '123@g.us',
+  })
+  id: string;
+}
+
+export enum GroupSortField {
+  ID = 'id',
+  SUBJECT = 'subject',
+}
+
+export class GroupsPaginationParams extends PaginationParams {
+  @ApiProperty({
+    description: 'Sort by field',
+    enum: GroupSortField,
+  })
+  @IsOptional()
+  @IsEnum(GroupSortField)
+  sortBy?: string;
 }

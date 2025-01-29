@@ -4,7 +4,13 @@ import { Context, Next } from '@nocobase/actions';
 import { 
   GetChatsQuery,
   GetChatMessagesQuery,
-  EditMessageRequest
+  ChatPictureQuery,
+  ChatPictureResponse,
+  PinMessageRequest,
+  EditMessageRequest,
+  ChatsPaginationParams,
+  OverviewPaginationParams,
+  ChatSummary
 } from '../structures/chats.dto';
 import { parseBool } from '../helpers';
 
@@ -16,15 +22,30 @@ export const chatsController = {
     try {
       const session = ctx.state.session
 
-      const query: GetChatsQuery = ctx.query;
-      
-      const chats = await session.getChats(query);
+      const pagination: ChatsPaginationParams = ctx.query;
+      const chats = await session.getChats(pagination);
       ctx.body = chats;
     } catch (error) {
       ctx.throw(500, `Failed to get chats: ${error.message}`);
     }
     await next();
   },
+
+  /**
+   * Get chats overview
+   */
+  async getChatsOverview(ctx: Context, next: Next) {
+    try {
+      const session = ctx.state.session;
+      const pagination: OverviewPaginationParams = ctx.query;
+      const overview: ChatSummary[] = await session.getChatsOverview(pagination);
+      ctx.body = overview;
+    } catch (error) {
+      ctx.throw(500, `Failed to get chats overview: ${error.message}`);
+    }
+    await next();
+  },
+
 
   /**
    * Delete chat
