@@ -67,7 +67,7 @@ export class NowebPersistentStore implements INowebStore {
     public storage: INowebStorage,
   ) {
     this.socket = null;
-    this.chatRepo = storage.getChatRepository();
+    this.chatRepo = storage.getChatRepository() as WaChatRepository;
     //console.log("chat repo is ",this.chatRepo);
     this.groupRepo = storage.getGroupRepository();
     this.contactRepo = storage.getContactsRepository();
@@ -187,6 +187,8 @@ export class NowebPersistentStore implements INowebStore {
     }
     const realMessages = messages.filter(isRealMessage);
     await this.messagesRepo.upsert(realMessages);
+    console.log("onmessageUpsert",realMessages)
+    //await this.messagesRepo.save(realMessages);
     this.logger.debug(
       `messages.upsert - ${messages.length} got messages, ${realMessages.length} real messages`,
     );
@@ -210,6 +212,7 @@ export class NowebPersistentStore implements INowebStore {
         isRealMessage(message, this.socket?.authState?.creds?.me?.id) || false;
       if (isYetRealMessage) {
         await this.messagesRepo.upsertOne(message);
+        //await this.messagesRepo.save(message);
       } else {
         await this.messagesRepo.deleteByJidByIds(jid, [update.key.id]);
       }
@@ -230,6 +233,7 @@ export class NowebPersistentStore implements INowebStore {
     for (const chat of chats) {
       delete chat['messages'];
       chat.conversationTimestamp = toNumber(chat.conversationTimestamp);
+      console.log("chat data is here",chat);
       await this.chatRepo.save(chat);
     }
     this.logger.info(`store sync - '${chats.length}' synced chats`);
@@ -386,6 +390,7 @@ export class NowebPersistentStore implements INowebStore {
       }
       updateMessageWithReaction(msg, reaction);
       await this.messagesRepo.upsertOne(msg);
+      //await this.messagesRepo.save(msg);
     }
   }
 
@@ -402,6 +407,7 @@ export class NowebPersistentStore implements INowebStore {
       }
       updateMessageWithReceipt(msg, receipt);
       await this.messagesRepo.upsertOne(msg);
+      //await this.messagesRepo.save(msg);
     }
   }
 
@@ -455,6 +461,7 @@ export class NowebPersistentStore implements INowebStore {
   getChats(pagination: PaginationParams, broadcast: boolean): Promise<Chat[]> {
     pagination.sortBy ||= 'conversationTimestamp';
     pagination.sortOrder ||= SortOrder.DESC;
+
     return this.chatRepo.getAllWithMessages(pagination, broadcast);
   }
 

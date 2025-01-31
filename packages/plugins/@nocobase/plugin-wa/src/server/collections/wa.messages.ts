@@ -24,7 +24,7 @@ export default {
       name: 'pushName'
     },
     {
-      type: 'string',
+      type: 'json',
       name: 'message'
     },
     {
@@ -34,6 +34,13 @@ export default {
     {
       type: 'boolean',
       name: 'key'
+    },
+    {
+      type: 'belongsTo',
+      name: 'chat',
+      target: 'wa_chats',
+      foreignKey: 'remoteJid',
+      targetKey: 'id'
     }
   ]
 };

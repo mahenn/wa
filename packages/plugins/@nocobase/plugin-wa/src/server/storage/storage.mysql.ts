@@ -21,27 +21,45 @@ export class WaMySQLStorage implements INowebStorage {
     //await this.db.close();
   }
 
-  getChatRepository() {
-    return this.db.getRepository('wa_chats') as WaChatRepository;
+  getChatRepository(): WaChatRepository {
+    //return this.db.getRepository('wa_chats') as WaChatRepository;
+    const repository = this.db.getRepository('wa_chats');
+    Object.setPrototypeOf(repository, WaChatRepository.prototype);
+    return repository as WaChatRepository;
   }
 
   getContactsRepository() {
-    return this.db.getRepository('wa_contacts') as WaContactRepository;
+    //return this.db.getRepository('wa_contacts') as WaContactRepository;
+    const repository = this.db.getRepository('wa_contacts');
+    Object.setPrototypeOf(repository, WaContactRepository.prototype);
+    return repository as WaContactRepository;
   }
 
   getGroupRepository() {
-    return this.db.getRepository('wa_groups') as WaGroupRepository;
+    //return this.db.getRepository('wa_groups') as WaGroupRepository;
+    const repository = this.db.getRepository('wa_groups');
+    Object.setPrototypeOf(repository, WaGroupRepository.prototype);
+    return repository as WaGroupRepository;
   }
 
   getMessagesRepository() {
-    return this.db.getRepository('wa_messages') as WaMessageRepository;
+    //return this.db.getRepository('wa_messages') as WaMessageRepository;
+    const repository = this.db.getRepository('wa_messages');
+    Object.setPrototypeOf(repository, WaMessageRepository.prototype);
+    return repository as WaMessageRepository;
   }
 
   getLabelsRepository() {
-    return this.db.getRepository('wa_labels') as WaLabelRepository;
+    //return this.db.getRepository('wa_labels') as WaLabelRepository;
+    const repository = this.db.getRepository('wa_labels');
+    Object.setPrototypeOf(repository, WaLabelRepository.prototype);
+    return repository as WaLabelRepository;
   }
 
   getLabelAssociationRepository() {
-    return this.db.getRepository('wa_label_associations') as WaLabelAssociationRepository;
+    //return this.db.getRepository('wa_label_associations') as WaLabelAssociationRepository;
+    const repository = this.db.getRepository('wa_label_associations');
+    Object.setPrototypeOf(repository, WaLabelAssociationRepository.prototype);
+    return repository as WaLabelAssociationRepository;
   }
 }

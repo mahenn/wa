@@ -952,8 +952,11 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       // Get name by contact
       const jid = toJID(chat.id);
       const contact = await this.store.getContactById(jid);
+      console.log("fetch contact is here",contact);
       name = contact?.name || contact?.notify;
     }
+
+
     const picture = await this.getContactProfilePicture(chat.id, false);
     const messages = await this.getChatMessages(
       chat.id,
@@ -965,7 +968,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       id: id,
       name: name || null,
       picture: picture,
-      lastMessage: message,
+      lastMessage: null,
       _chat: chat,
     };
   }

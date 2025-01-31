@@ -2,29 +2,109 @@
 import { Chat } from '@adiwajshing/baileys';
 import { WaBaseRepository } from './repository.base';
 import { IChatRepository } from '../interfaces/chat.repository';
+import { PaginationParams } from '../structures/pagination.dto';
 
 export class WaChatRepository extends WaBaseRepository<Chat> implements IChatRepository {
-  async getAllWithMessages(pagination: PaginationParams, broadcast: boolean): Promise<Chat[]> {
-    const query = this.model.query()
-      .leftJoin('wa_messages', 'wa_chats.id', 'wa_messages.remoteJid');
+  async save(chat: Chat): Promise<void> {
+    console.log("chat data here",chat);
+    try {
+      // Check if chat already exists
+      const existingChat = await this.findOne({
+        filter: { id: chat.id }
+      });
 
-    if (broadcast) {
-      query.where('isBroadcast', true);
+      const chatData = {
+        id: chat.id,
+        name: chat.name,
+        data: chat, // Store the full chat object in data field
+        conversationTimestamp: chat.conversationTimestamp || null,
+        unreadCount: chat.unreadCount || 0,
+        pinned: chat.pinned || false,
+        archived: chat.archived || false,
+        isGroup: chat.isGroup || false,
+        isBroadcast: chat.id.endsWith('@broadcast') || chat.id.endsWith('@newsletter')
+      };
+
+      if (existingChat) {
+        // Update existing chat
+         await this.update({
+          filter: { id: chat.id },  // Filter must be at the top level
+          values: chatData
+        });
+      } else {
+        // Create new chat
+        await this.create({values:chatData});
+      }
+    } catch (error) {
+      console.error('Error saving chat:', error);
+      throw error;
     }
+  }
 
-    if (pagination) {
-      // Apply pagination
-      if (pagination.limit) {
-        query.limit(pagination.limit);
-      }
-      if (pagination.offset) {
-        query.offset(pagination.offset);
-      }
-      if (pagination.sortBy) {
-        query.orderBy(pagination.sortBy, pagination.sortOrder);
-      }
-    }
+async getAllWithMessages(pagination: PaginationParams, broadcast: boolean): Promise<Chat[]> {
+  try {
+    
+    // Execute the query using find()
+    const result = await this.find({
+     pagination, // Pass pagination directly, base class will handle sorting
+      filter: broadcast ? { isBroadcast: true } : {}
+    });
 
-    return query;
+    console.log(result);
+    // Map the results to Chat objects
+    return result.map(row => {
+      const chatData = row.dataValues || row;
+      return {
+      id: chatData.id,
+      name: chatData.name,
+      conversationTimestamp: chatData.conversationTimestamp,
+      unreadCount: chatData.unreadCount,
+      pinned: chatData.pinned,
+      archived: chatData.archived,
+      isGroup: chatData.isGroup,
+      isBroadcast: chatData.isBroadcast,
+      ...chatData.data
+      };
+    });
+
+  } catch (error) {
+    console.error('Error in getAllWithMessages:', error);
+    throw error;
+  }
+}
+
+  async getAll(): Promise<Chat[]> {
+    const results = await this.findAll();
+    return results.map(row => row.data as Chat);
+  }
+
+  async getAllByIds(ids: string[]): Promise<Chat[]> {
+    const results = await this.findAll({
+      filter: {
+        id: {
+          $in: ids
+        }
+      }
+    });
+    return results.map(row => row.data as Chat);
+  }
+
+  async getById(id: string): Promise<Chat | null> {
+    const result = await this.findOne({
+      filter: { id }
+    });
+    return result ? result.data as Chat : null;
+  }
+
+  async deleteAll(): Promise<void> {
+    await this.destroy({
+      filter: {}
+    });
+  }
+
+  async deleteById(id: string): Promise<void> {
+    await this.destroy({
+      filter: { id }
+    });
   }
 }

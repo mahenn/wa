@@ -34,6 +34,7 @@ import {
   EditMessageRequest
 } from './structures/chats.dto';
 
+import { resolve } from 'path';
 
 declare module '@nocobase/server' {
   interface Application {
@@ -58,6 +59,10 @@ export class PluginWaServer extends Plugin {
 
     this.startTimestamp = Date.now();
 
+    this.db.import({
+      directory: resolve(__dirname, 'collections'),
+    });
+
     const logger = new PinoLogger({
       pinoHttp: {
         level: 'info',
@@ -68,7 +73,13 @@ export class PluginWaServer extends Plugin {
 
 
     this.app.db.registerRepositories({
-      chatRepo: WaChatRepository
+       'wa_chats': WaChatRepository
+    });
+
+    this.db.collection({
+      name: 'wa_chats',
+      repository: WaChatRepository,
+      // ... other collection config
     });
 
     this.engineConfig = new EngineConfigService(this.app.db);

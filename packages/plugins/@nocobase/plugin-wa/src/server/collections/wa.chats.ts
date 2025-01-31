@@ -16,7 +16,7 @@ export default {
       name: 'conversationTimestamp'
     },
     {
-      type: 'boolean', 
+      type: 'number', 
       name: 'unreadCount'
     },
     {
@@ -38,6 +38,22 @@ export default {
     {
       type: 'boolean',
       name: 'isBroadcast'
+    },
+    {
+      type: 'hasMany',
+      name: 'messages',
+      target: 'wa_messages',
+      foreignKey: 'remoteJid',
+      sourceKey: 'id'
+    }
+  ],
+  relations: [
+    {
+      type: 'hasMany',
+      name: 'messages',
+      target: 'wa_messages',
+      foreignKey: 'remoteJid',
+      sourceKey: 'id'
     }
   ]
 };

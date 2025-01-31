@@ -3,111 +3,31 @@ import { WAMessage, proto } from '@adiwajshing/baileys';
 import { Repository } from '@nocobase/database';
 import { IMessageRepository } from '../core/engines/noweb/store/IMessageRepository';
 import { PaginationParams } from '../structures/pagination.dto';
+import { GetChatMessagesFilter } from '../structures/chats.dto';
+import { WaBaseRepository } from './repository.base';
 
-export class WaMessageRepository extends Repository implements IMessageRepository {
-  async getAll(pagination?: PaginationParams): Promise<WAMessage[]> {
-    const query: any = {};
-    
-    if (pagination) {
-      query.limit = pagination.limit;
-      query.offset = pagination.offset;
-      if (pagination.sortBy) {
-        query.sort = [[pagination.sortBy, pagination.sortOrder]];
-      }
-    }
-
-    const { rows } = await this.find(query);
-    return rows.map(row => row.data);
-  }
-
-  async getAllByJid(
-    remoteJid: string, 
-    pagination?: PaginationParams
-  ): Promise<WAMessage[]> {
-    const query: any = {
-      filter: {
-        remoteJid
-      }
-    };
-    
-    if (pagination) {
-      query.limit = pagination.limit;
-      query.offset = pagination.offset;
-      if (pagination.sortBy) {
-        query.sort = [[pagination.sortBy, pagination.sortOrder]];
-      }
-    }
-
-    const { rows } = await this.find(query);
-    return rows.map(row => row.data);
-  }
-
-  async getById(id: string): Promise<WAMessage | null> {
-    const message = await this.findOne({
-      filter: { id }
-    });
-    return message?.data || null;
-  }
-
-  async getByRemoteJidAndId(
-    remoteJid: string, 
-    id: string
-  ): Promise<WAMessage | null> {
-    const message = await this.findOne({
-      filter: {
-        remoteJid,
-        id
-      }
-    });
-    return message?.data || null;
-  }
-
+export class WaMessageRepository extends WaBaseRepository<WAMessage> implements IMessagesRepository {
   async deleteAll(): Promise<void> {
     await this.destroy({
-      filter: {}
+      where: {}
     });
   }
 
-  async deleteById(id: string): Promise<void> {
-    await this.destroy({
-      filter: { id }
+  async upsert(messages: any[]): Promise<void> {
+    await this.createMany({
+      records: messages.map(msg => ({
+        id: msg.key.id,
+        remoteJid: msg.key.remoteJid,
+        data: msg,
+        messageTimestamp: msg.messageTimestamp,
+        pushName: msg.pushName,
+        message: JSON.stringify(msg.message),
+        messageType: msg.messageType
+      }))
     });
   }
 
-  async deleteByJid(remoteJid: string): Promise<void> {
-    await this.destroy({
-      filter: { remoteJid }
-    });
-  }
-
-  async save(message: WAMessage): Promise<void> {
-    // Extract relevant fields from the message
-    const messageContent = message.message;
-    let messageType = 'unknown';
-    let messageText = '';
-
-    // Determine message type and extract text content
-    if (messageContent) {
-      if (messageContent.conversation) {
-        messageType = 'conversation';
-        messageText = messageContent.conversation;
-      } else if (messageContent.imageMessage) {
-        messageType = 'image';
-        messageText = messageContent.imageMessage.caption || '';
-      } else if (messageContent.videoMessage) {
-        messageType = 'video';
-        messageText = messageContent.videoMessage.caption || '';
-      } else if (messageContent.documentMessage) {
-        messageType = 'document';
-        messageText = messageContent.documentMessage.fileName || '';
-      } else if (messageContent.audioMessage) {
-        messageType = 'audio';
-      } else if (messageContent.stickerMessage) {
-        messageType = 'sticker';
-      }
-    }
-
-    // Create or update the message record
+  async upsertOne(message: any): Promise<void> {
     await this.create({
       values: {
         id: message.key.id,
@@ -115,93 +35,70 @@ export class WaMessageRepository extends Repository implements IMessageRepositor
         data: message,
         messageTimestamp: message.messageTimestamp,
         pushName: message.pushName,
-        message: messageText,
-        messageType: messageType,
-        key: JSON.stringify(message.key)
+        message: JSON.stringify(message.message),
+        messageType: message.messageType
       }
     });
   }
 
-  async updateMessage(
-    remoteJid: string, 
-    id: string, 
-    message: Partial<proto.IMessage>
-  ): Promise<void> {
-    const existingMessage = await this.getByRemoteJidAndId(remoteJid, id);
-    if (existingMessage) {
-      const updatedMessage = {
-        ...existingMessage,
-        message: {
-          ...existingMessage.message,
-          ...message
-        }
-      };
+  async getAllByJid(
+    jid: string,
+    filter: GetChatMessagesFilter,
+    pagination: PaginationParams,
+  ): Promise<any[]> {
 
-      await this.save(updatedMessage);
-    }
-  }
+    console.log("pagination is here",pagination);
 
-  async getLastMessagesByJid(
-    remoteJid: string, 
-    limit: number
-  ): Promise<WAMessage[]> {
-    const { rows } = await this.find({
+    const  rows  = await this.find({
       filter: {
-        remoteJid
+        remoteJid: jid,
+        ...filter
       },
-      sort: [['messageTimestamp', 'desc']],
-      limit
+      pagination
     });
+    
     return rows.map(row => row.data);
   }
 
-  async search(
-    query: string,
-    pagination?: PaginationParams
-  ): Promise<WAMessage[]> {
-    const searchQuery: any = {
+  async getByJidById(jid: string, id: string): Promise<any | null> {
+    const message = await this.findOne({
       filter: {
-        message: {
-          $like: `%${query}%`
-        }
+        remoteJid: jid,
+        id: id
       }
-    };
-
-    if (pagination) {
-      searchQuery.limit = pagination.limit;
-      searchQuery.offset = pagination.offset;
-      if (pagination.sortBy) {
-        searchQuery.sort = [[pagination.sortBy, pagination.sortOrder]];
-      }
-    }
-
-    const { rows } = await this.find(searchQuery);
-    return rows.map(row => row.data);
+    });
+    return message?.data;
   }
 
-  async searchByJid(
-    remoteJid: string,
-    query: string,
-    pagination?: PaginationParams
-  ): Promise<WAMessage[]> {
-    const searchQuery: any = {
+  async updateByJidAndId(jid: string, id: string, update: any): Promise<boolean> {
+    const [count] = await this.update({
       filter: {
-        remoteJid,
-        message: {
-          $like: `%${query}%`
+        remoteJid: jid,
+        id: id
+      },
+      values: {
+        data: update
+      }
+    });
+    return count > 0;
+  }
+
+  async deleteByJidByIds(jid: string, ids: string[]): Promise<void> {
+    await this.destroy({
+      filter: {
+        remoteJid: jid,
+        id: {
+          $in: ids
         }
       }
-    };
+    });
+  }
 
-    if (pagination) {
-      searchQuery.limit = pagination.limit;
-      searchQuery.offset = pagination.offset;
-      if (pagination.sortBy) {
-        searchQuery.sort = [[pagination.sortBy, pagination.sortOrder]];
+  async deleteAllByJid(jid: string): Promise<void> {
+    await this.destroy({
+      filter: {
+        remoteJid: jid
       }
-    }
-
-    const { rows } = await this.find(searchQuery);
-    return rows.map(row => row.data);
+    });
   }
 }
