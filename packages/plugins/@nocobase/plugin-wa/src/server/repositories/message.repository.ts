@@ -13,32 +13,50 @@ export class WaMessageRepository extends WaBaseRepository<WAMessage> implements 
     });
   }
 
+  private getMessageData(message: any) {
+    return {
+      id: message.key.id,
+      remoteJid: message.key.remoteJid,
+      data: message,
+      messageTimestamp: message.messageTimestamp,
+      pushName: message.pushName,
+      message: JSON.stringify(message.message),
+      messageType: message.messageType
+    };
+  }
+
   async upsert(messages: any[]): Promise<void> {
-    await this.createMany({
-      records: messages.map(msg => ({
-        id: msg.key.id,
-        remoteJid: msg.key.remoteJid,
-        data: msg,
-        messageTimestamp: msg.messageTimestamp,
-        pushName: msg.pushName,
-        message: JSON.stringify(msg.message),
-        messageType: msg.messageType
-      }))
-    });
+    // await this.createMany({
+    //   records: messages.map(msg => ({
+    //     id: msg.key.id,
+    //     remoteJid: msg.key.remoteJid,
+    //     data: msg,
+    //     messageTimestamp: msg.messageTimestamp,
+    //     pushName: msg.pushName,
+    //     message: JSON.stringify(msg.message),
+    //     messageType: msg.messageType
+    //   }))
+    // });
+
+     for (const message of messages) {
+      await this.saveEntity(message, message.key.id, this.getMessageData);
+    }
   }
 
   async upsertOne(message: any): Promise<void> {
-    await this.create({
-      values: {
-        id: message.key.id,
-        remoteJid: message.key.remoteJid,
-        data: message,
-        messageTimestamp: message.messageTimestamp,
-        pushName: message.pushName,
-        message: JSON.stringify(message.message),
-        messageType: message.messageType
-      }
-    });
+    // await this.create({
+    //   values: {
+    //     id: message.key.id,
+    //     remoteJid: message.key.remoteJid,
+    //     data: message,
+    //     messageTimestamp: message.messageTimestamp,
+    //     pushName: message.pushName,
+    //     message: JSON.stringify(message.message),
+    //     messageType: message.messageType
+    //   }
+    // });
+
+    await this.saveEntity(message, message.key.id, this.getMessageData);
   }
 
   async getAllByJid(

@@ -12,8 +12,8 @@ const ContactsSidebar = ({ chats, onSelectChat }) => {
   const getChatName = (chat) => {
     //console.log("contactsidebar chat:",chat);
     return chat.isGroup
-      ? chat.groupMetadata?.subject || 'Unnamed Group'
-      : chat.name || chat.id.user || 'Unnamed Contact';
+      ? chat.groupMetadata?.subject || chat.name  ||  'Unnamed Group'
+      : chat.name || chat.notify || 'Unnamed Contact';
   };
 
   // Get chat ID 

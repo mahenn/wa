@@ -7,38 +7,52 @@ import { PaginationParams } from '../structures/pagination.dto';
 export class WaChatRepository extends WaBaseRepository<Chat> implements IChatRepository {
   async save(chat: Chat): Promise<void> {
     console.log("chat data here",chat);
-    try {
-      // Check if chat already exists
-      const existingChat = await this.findOne({
-        filter: { id: chat.id }
-      });
+    // try {
+    //   // Check if chat already exists
+    //   const existingChat = await this.findOne({
+    //     filter: { id: chat.id }
+    //   });
 
-      const chatData = {
-        id: chat.id,
-        name: chat.name,
-        data: chat, // Store the full chat object in data field
-        conversationTimestamp: chat.conversationTimestamp || null,
-        unreadCount: chat.unreadCount || 0,
-        pinned: chat.pinned || false,
-        archived: chat.archived || false,
-        isGroup: chat.isGroup || false,
-        isBroadcast: chat.id.endsWith('@broadcast') || chat.id.endsWith('@newsletter')
-      };
+    //   const chatData = {
+    //     id: chat.id,
+    //     name: chat.name,
+    //     data: chat, // Store the full chat object in data field
+    //     conversationTimestamp: chat.conversationTimestamp || null,
+    //     unreadCount: chat.unreadCount || 0,
+    //     pinned: chat.pinned || false,
+    //     archived: chat.archived || false,
+    //     isGroup: chat.isGroup || false,
+    //     isBroadcast: chat.id.endsWith('@broadcast') || chat.id.endsWith('@newsletter')
+    //   };
 
-      if (existingChat) {
-        // Update existing chat
-         await this.update({
-          filter: { id: chat.id },  // Filter must be at the top level
-          values: chatData
-        });
-      } else {
-        // Create new chat
-        await this.create({values:chatData});
-      }
-    } catch (error) {
-      console.error('Error saving chat:', error);
-      throw error;
-    }
+    //   if (existingChat) {
+    //     // Update existing chat
+    //      await this.update({
+    //       filter: { id: chat.id },  // Filter must be at the top level
+    //       values: chatData
+    //     });
+    //   } else {
+    //     // Create new chat
+    //     await this.create({values:chatData});
+    //   }
+    // } catch (error) {
+    //   console.error('Error saving chat:', error);
+    //   throw error;
+    // }
+
+    return this.saveEntity(chat, chat.id, (chat) => ({
+      id: chat.id,
+      name: chat.name,
+      data: chat,
+      conversationTimestamp: chat.conversationTimestamp,
+      unreadCount: chat.unreadCount,
+      pinned: chat.pinned,
+      archived: chat.archived,
+      isGroup: chat.isGroup,
+      isBroadcast: chat.id.endsWith('@broadcast') || chat.id.endsWith('@newsletter')
+    }));
+
+
   }
 
 async getAllWithMessages(pagination: PaginationParams, broadcast: boolean): Promise<Chat[]> {
@@ -47,10 +61,9 @@ async getAllWithMessages(pagination: PaginationParams, broadcast: boolean): Prom
     // Execute the query using find()
     const result = await this.find({
      pagination, // Pass pagination directly, base class will handle sorting
-      filter: broadcast ? { isBroadcast: true } : {}
+      filter: broadcast ? { isBroadcast: true } : {isBroadcast: false}
     });
 
-    console.log(result);
     // Map the results to Chat objects
     return result.map(row => {
       const chatData = row.dataValues || row;

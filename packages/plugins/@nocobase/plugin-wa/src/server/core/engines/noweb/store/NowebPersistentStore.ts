@@ -322,6 +322,7 @@ export class NowebPersistentStore implements INowebStore {
       Object.assign(chat, update);
       chat.conversationTimestamp = toNumber(chat.conversationTimestamp);
       delete chat['messages'];
+      console.log("onChatUpdate data is here",chat)
       await this.chatRepo.save(chat);
     }
   }
@@ -345,6 +346,11 @@ export class NowebPersistentStore implements INowebStore {
         (key) => update[key] === undefined && delete update[key],
       );
       const result = { ...(contact || {}), ...update };
+
+      console.log("onContactsUpsert is here",result);
+
+
+
       await this.contactRepo.save(result);
     }
   }

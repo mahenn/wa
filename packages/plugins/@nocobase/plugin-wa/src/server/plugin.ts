@@ -717,6 +717,7 @@ export class PluginWaServer extends Plugin {
       const query = {
         session: sessionId ,
         limit: 100,
+        sortOrder: 'ASC',
         downloadMedia: true
       };
 

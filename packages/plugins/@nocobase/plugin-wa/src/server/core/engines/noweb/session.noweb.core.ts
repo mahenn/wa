@@ -925,7 +925,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
    async getChats(pagination: PaginationParams) {
     const chats = await this.store.getChats(pagination, true);
     // Remove unreadCount, it's not ready yet
-    chats.forEach((chat) => delete chat.unreadCount);
+    //chats.forEach((chat) => delete chat.unreadCount);
     return chats;
   }
 
@@ -935,7 +935,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     //console.log("db store is here",this.store);
     const chats = await this.store.getChats(pagination, false);
     // Remove unreadCount, it's not ready yet
-    chats.forEach((chat) => delete chat.unreadCount);
+   // chats.forEach((chat) => delete chat.unreadCount);
 
     const promises = [];
     for (const chat of chats) {
@@ -960,7 +960,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     const picture = await this.getContactProfilePicture(chat.id, false);
     const messages = await this.getChatMessages(
       chat.id,
-      { limit: 1, offset: 0, downloadMedia: false },
+      { limit: 1, offset: 0, sortOrder:'desc', downloadMedia: false },
       {},
     );
     const message = messages.length > 0 ? messages[0] : null;
@@ -968,7 +968,8 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       id: id,
       name: name || null,
       picture: picture,
-      lastMessage: null,
+      lastMessage: message,
+      unreadCount: chat.unreadCount,
       _chat: chat,
     };
   }

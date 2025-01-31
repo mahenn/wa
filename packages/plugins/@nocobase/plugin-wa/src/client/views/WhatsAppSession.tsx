@@ -125,6 +125,7 @@ const WhatsAppSession = () => {
           break;
 
         case 'chats':
+          console.log("chat data here",data.chats);
           setChats(data.chats);
           break;
 

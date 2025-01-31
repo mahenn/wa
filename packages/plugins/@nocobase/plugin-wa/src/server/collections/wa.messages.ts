@@ -32,7 +32,7 @@ export default {
       name: 'messageType'
     },
     {
-      type: 'boolean',
+      type: 'json',
       name: 'key'
     },
     {
