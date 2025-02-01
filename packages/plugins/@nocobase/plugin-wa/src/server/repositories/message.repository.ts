@@ -65,8 +65,6 @@ export class WaMessageRepository extends WaBaseRepository<WAMessage> implements 
     pagination: PaginationParams,
   ): Promise<any[]> {
 
-    console.log("pagination is here",pagination);
-
     const  rows  = await this.find({
       filter: {
         remoteJid: jid,

@@ -3,8 +3,10 @@ import { GroupMetadata } from '@adiwajshing/baileys';
 import { Repository } from '@nocobase/database';
 import { IGroupRepository } from '../core/engines/noweb/store/IGroupRepository';
 import { PaginationParams } from '../structures/pagination.dto';
+import { WaBaseRepository } from './repository.base';
 
-export class WaGroupRepository extends Repository implements IGroupRepository {
+
+export class WaGroupRepository extends WaBaseRepository<GroupMetadata> implements IGroupRepository {
   async getAll(pagination?: PaginationParams): Promise<GroupMetadata[]> {
     const query: any = {};
     
@@ -40,16 +42,28 @@ export class WaGroupRepository extends Repository implements IGroupRepository {
   }
 
   async save(group: GroupMetadata): Promise<void> {
-    await this.create({
-      values: {
-        id: group.id,
-        data: group,
-        subject: group.subject,
-        participants: group.participants,
-        owner: group.owner,
-        desc: group.desc,
-        size: group.size
-      }
+    // await this.create({
+    //   values: {
+    //     id: group.id,
+    //     data: group,
+    //     subject: group.subject,
+    //     participants: group.participants,
+    //     owner: group.owner,
+    //     desc: group.desc,
+    //     size: group.size
+    //   }
+    // });
+
+    const getEntityData = (group: GroupMetadata) => ({
+      id: group.id,
+      data: group,
+      subject: group.subject,
+      participants: group.participants,
+      owner: group.owner,
+      desc: group.desc,
+      size: group.size
     });
+
+    await this.saveEntity(group, group.id, getEntityData);
   }
 }

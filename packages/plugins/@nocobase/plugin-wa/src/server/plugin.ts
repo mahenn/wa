@@ -731,48 +731,49 @@ export class PluginWaServer extends Plugin {
 
       console.error(`fetching messages for offset now: ${offset}`,messages.length);
 
-      const processedMessages = await Promise.all(
-        messages.map(async (message) => {
-          let reactions = [];
-          if (message.hasReaction) {
-            try {
-              reactions = await message.getReactions();
-            } catch (error) {
-              console.error(`Error fetching reactions for message: ${message.id._serialized}`, error);
-            }
-          }
+      // const processedMessages = await Promise.all(
+      //   messages.map(async (message) => {
+      //     let reactions = [];
+      //     if (message.hasReaction) {
+      //       try {
+      //         reactions = await message.getReactions();
+      //       } catch (error) {
+      //         console.error(`Error fetching reactions for message: ${message.id._serialized}`, error);
+      //       }
+      //     }
 
-          if (message.hasMedia) {
-            try {
-              const media = await message.downloadMedia();
-               return {
-              ...message,
-              mediaData: media && media.data ? media.data : null, // Base64-encoded media data or null
-              mediaType: media && media.mimetype ? media.mimetype : null, // Mime type or null
-            };
-          } catch (error) {
-            //console.error(`Error downloading media for message: ${message.id._serialized}`, error);
-            return {
-              ...message,
-              mediaData: null,
-              mediaType: null,
-                reactions
-              };
-            }
-          }
+      //     if (message.hasMedia) {
+      //       try {
+      //         const media = await message.downloadMedia();
+      //         console.log("check downloaded content",media);
+      //          return {
+      //         ...message,
+      //         mediaData: media && media.data ? media.data : null, // Base64-encoded media data or null
+      //         mediaType: media && media.mimetype ? media.mimetype : null, // Mime type or null
+      //       };
+      //     } catch (error) {
+      //       //console.error(`Error downloading media for message: ${message.id._serialized}`, error);
+      //       return {
+      //         ...message,
+      //         mediaData: null,
+      //         mediaType: null,
+      //           reactions
+      //         };
+      //       }
+      //     }
 
-          return {
-            ...message,
-            reactions, // Add reactions if available
-          };
-        })
-      );
+      //     return {
+      //       ...message,
+      //       reactions, // Add reactions if available
+      //     };
+      //   })
+      // );
 
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
           type: 'messages',
           chatId,
-          messages: processedMessages, // Send processed messages including media data
+          messages: messages, //processedMessages, // Send processed messages including media data
         }));
       }
     } catch (error) {
@@ -793,6 +794,43 @@ export class PluginWaServer extends Plugin {
   async afterDisable() {}
 
   async remove() {}
+
+  private setupErrorHandlers() {
+    // Handle unhandled promise rejections
+    process.on('unhandledRejection', (reason, promise) => {
+      this.logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+      if (reason instanceof Error) {
+        this.logger.error(reason.stack);
+      }
+    });
+
+    // Handle SIGINT (Ctrl+C)
+    // process.on('SIGINT', () => {
+    //   this.logger.info('SIGINT received');
+    //   // Clean up WhatsApp sessions
+    //   this.cleanupSessions();
+    // });
+
+    // // Handle SIGTERM
+    // process.on('SIGTERM', () => {
+    //   this.logger.info('SIGTERM received');
+    //   // Clean up WhatsApp sessions
+    //   this.cleanupSessions();
+    // });
+  }
+
+  private async cleanupSessions() {
+    try {
+      // Get all active sessions and close them gracefully
+      const sessions = await this.app.db.getRepository('wa_sessions').find();
+      for (const session of sessions) {
+        await session.end();
+      }
+      this.logger.info('All WhatsApp sessions cleaned up');
+    } catch (error) {
+      this.logger.error('Error cleaning up sessions:', error);
+    }
+  }
 }
 
 export default PluginWaServer;

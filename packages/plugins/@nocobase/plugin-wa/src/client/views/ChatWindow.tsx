@@ -154,16 +154,15 @@ const renderMessageContent = (message) => {
   }
 
   // Handle media (image, video, audio)
-  if (message.hasMedia && message.mediaData) {
-    const mimeType = message.mediaType || 'image/jpeg';
-
+  if (message.hasMedia && message.media) {
+    const mimeType = message.media.mimetype || 'image/jpeg';
     // Image type
     if (mimeType.includes('image')) {
       return (
         <div>
           {renderForwardedMessage(message)}
           {renderRepliedMessage(message)}
-          <img src={`data:${mimeType};base64,${message.mediaData}`} alt="Sent image" style={{ width: '100%' }} />
+          <img src={`${message.media.url}`} alt="Sent image" style={{ width: '100%' }} />
           {message.body && (
             <div
               dangerouslySetInnerHTML={{ __html: parseWhatsAppFormatting(message.body) }}
@@ -231,7 +230,7 @@ const renderMessageContent = (message) => {
         <div>
           {renderForwardedMessage(message)}
           {renderRepliedMessage(message)}
-          <a href={`data:${mimeType};base64,${message.mediaData}`} download={`document.${mimeType.split('/')[1]}`}>
+          <a href={`${message.media.url}`} download={`document.${mimeType.split('/')[1]}`}>
             Download Document
           </a>
           {message.body && (
@@ -247,7 +246,7 @@ const renderMessageContent = (message) => {
   }
 
   // Fallback for unsupported or unknown media types
-  return <Text>Unsupported message type or media format</Text>;
+  return <Text>Unsupported message type or media format </Text>;
 };
 
 

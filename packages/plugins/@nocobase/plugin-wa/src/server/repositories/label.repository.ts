@@ -2,8 +2,10 @@
 import { Label } from '@adiwajshing/baileys/src/Types/Label';
 import { Repository } from '@nocobase/database';
 import { ILabelsRepository } from '../core/engines/noweb/store/ILabelsRepository';
+import { WaBaseRepository } from './repository.base';
 
-export class WaLabelRepository extends Repository implements ILabelsRepository {
+
+export class WaLabelRepository extends WaBaseRepository<Label>  implements ILabelsRepository {
   async getById(id: string): Promise<Label | null> {
     const label = await this.findOne({
       filter: { id }
@@ -34,14 +36,23 @@ export class WaLabelRepository extends Repository implements ILabelsRepository {
   }
 
   async save(label: Label): Promise<void> {
-    await this.create({
-      values: {
-        id: label.id,
-        data: label,
-        name: label.name,
-        color: label.color,
-        predefinedId: label.predefinedId
-      }
+    // await this.create({
+    //   values: {
+    //     id: label.id,
+    //     data: label,
+    //     name: label.name,
+    //     color: label.color,
+    //     predefinedId: label.predefinedId
+    //   }
+    // });
+    const getEntityData = (label: Label) => ({
+      id: label.id,
+      data: label,
+      name: label.name,
+      color: label.color,
+      predefinedId: label.predefinedId
     });
+
+    await this.saveEntity(label, label.id, getEntityData);
   }
 }

@@ -7,7 +7,6 @@ export class WaBaseRepository<T> extends Repository {
     if (!pagination?.sortBy) {
       return undefined;
     }
-    console.log("pagination order is ",pagination.sortOrder);
     // Convert to NocoBase sort format
     const direction = pagination.sortOrder === 'desc' ? '-' : '';
     return [`${direction}${pagination.sortBy}`];

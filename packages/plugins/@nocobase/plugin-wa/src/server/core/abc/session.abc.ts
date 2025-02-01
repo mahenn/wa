@@ -560,7 +560,7 @@ export abstract class WhatsappSession {
     //   this.logger.error(err, err.stack);
     //   return null;
     // });
-    const url = 'https://www.shutterstock.com/shutterstock/photos/2063335577/display_1500/stock-vector-block-contact-icon-vector-avatar-blocked-symbol-2063335577.jpg';//@mahen 
+    const url = '/storage/uploads/icon.png';//@mahen 
     this.profilePictures.set(id, url);
     return url;
   }

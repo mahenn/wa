@@ -438,6 +438,14 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     this.logger.debug(`Start listening ${BaileysEvents.CONNECTION_UPDATE}...`);
     this.sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr, isNewLogin } = update;
+
+
+    if (lastDisconnect?.error?.message === 'Timed Out') {
+      this.logger.warn('Connection timed out, attempting restart...');
+      this.restartClient();
+      return;
+    }
+
       if (isNewLogin) {
         this.restartClient();
       } else if (connection === 'open') {
@@ -952,7 +960,6 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       // Get name by contact
       const jid = toJID(chat.id);
       const contact = await this.store.getContactById(jid);
-      console.log("fetch contact is here",contact);
       name = contact?.name || contact?.notify;
     }
 

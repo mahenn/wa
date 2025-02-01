@@ -83,7 +83,7 @@ export function ensureNumber(value: number | Long): number {
     // @ts-ignore
     return value;
   }
-  return typeof value === 'number' ? value : toNumber(value);
+  return typeof value === 'number' ? value : value;//toNumber(value); @mahen
 }
 
 const toNumber = (longValue: Long): number => {

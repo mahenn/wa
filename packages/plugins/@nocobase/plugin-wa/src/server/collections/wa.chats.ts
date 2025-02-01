@@ -16,7 +16,7 @@ export default {
       name: 'conversationTimestamp'
     },
     {
-      type: 'number', 
+      type: 'integer', 
       name: 'unreadCount'
     },
     {

@@ -97,6 +97,24 @@ export class MediaManager implements IMediaManager {
     return data;
   }
 
+  private async processMediaInBackground<Message>(
+    processor: IMediaEngineProcessor<Message>,
+    message: Message,
+    session: string,
+    media: WAMedia,
+  ) {
+    const messageId = processor.getMessageId(message);
+    try {
+      const data = await this.processMediaInternal(processor, message, session);
+      Object.assign(media, data);
+    } catch (err) {
+      this.log.error(err, `Error processing media for message '${messageId}'`);
+      media.error = err;
+      // @ts-ignore
+      media.error.details = `${err.stack}`;
+    }
+  }
+
   async processMedia<Message>(
     processor: IMediaEngineProcessor<Message>,
     message: Message,
@@ -124,7 +142,7 @@ export class MediaManager implements IMediaManager {
     try {
       media.filename = processor.getFilename(message);
       media.mimetype = processor.getMimetype(message);
-      media.filename = processor.getFilename(message);
+      //media.filename = processor.getFilename(message);
       const data = await this.processMediaInternal(processor, message, session);
       media = { ...media, ...data };
     } catch (err) {
@@ -135,6 +153,10 @@ export class MediaManager implements IMediaManager {
     }
     // @ts-ignore
     message.media = media;
+
+    // Process media in background
+   // this.processMediaInBackground(processor, message, session, media);
+    
     return message;
   }
 

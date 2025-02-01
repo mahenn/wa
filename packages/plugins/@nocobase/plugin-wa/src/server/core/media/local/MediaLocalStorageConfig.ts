@@ -1,12 +1,12 @@
 import { WhatsappConfigService } from '../../../config.service';
 
 export class MediaLocalStorageConfig {
-  public filesUri = '/api/files';
+  public filesUri = 'storage/uploads/whatsapp';
 
   constructor(private config: WhatsappConfigService) {}
 
   get filesURL(): string {
-    return  `${this.config.baseUrl}${this.filesUri}/`;
+    return  `/${this.filesUri}/`;
   }
 
   get filesFolder(): string {

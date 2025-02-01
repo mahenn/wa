@@ -187,7 +187,7 @@ export class NowebPersistentStore implements INowebStore {
     }
     const realMessages = messages.filter(isRealMessage);
     await this.messagesRepo.upsert(realMessages);
-    console.log("onmessageUpsert",realMessages)
+    //console.log("onmessageUpsert",realMessages)
     //await this.messagesRepo.save(realMessages);
     this.logger.debug(
       `messages.upsert - ${messages.length} got messages, ${realMessages.length} real messages`,
@@ -233,7 +233,7 @@ export class NowebPersistentStore implements INowebStore {
     for (const chat of chats) {
       delete chat['messages'];
       chat.conversationTimestamp = toNumber(chat.conversationTimestamp);
-      console.log("chat data is here",chat);
+      //console.log("chat data is here",chat);
       await this.chatRepo.save(chat);
     }
     this.logger.info(`store sync - '${chats.length}' synced chats`);
@@ -322,7 +322,7 @@ export class NowebPersistentStore implements INowebStore {
       Object.assign(chat, update);
       chat.conversationTimestamp = toNumber(chat.conversationTimestamp);
       delete chat['messages'];
-      console.log("onChatUpdate data is here",chat)
+      //console.log("onChatUpdate data is here",chat)
       await this.chatRepo.save(chat);
     }
   }
@@ -347,7 +347,7 @@ export class NowebPersistentStore implements INowebStore {
       );
       const result = { ...(contact || {}), ...update };
 
-      console.log("onContactsUpsert is here",result);
+      //console.log("onContactsUpsert is here",result);
 
 
 
@@ -373,9 +373,21 @@ export class NowebPersistentStore implements INowebStore {
       Object.assign(contact, update);
 
       if (update.imgUrl === 'changed') {
+        try {
         contact.imgUrl = this.socket
           ? await this.socket?.profilePictureUrl(contact.id)
           : undefined;
+          } catch (error) {
+            if (error?.data === 404) {
+              // Profile picture not found, set to undefined
+              contact.imgUrl = undefined;
+              this.logger.debug(`No profile picture found for contact ${contact.id}`);
+            } else {
+              this.logger.debug(`Error fetching profile picture for contact ${contact.id}`);
+              // Rethrow other errors
+             /// throw error;
+            }
+          }
       } else if (update.imgUrl === 'removed') {
         delete contact.imgUrl;
       }

@@ -14,11 +14,9 @@ export class WaContactRepository extends WaBaseRepository<Contact> implements IC
 
   async getById(id: string): Promise<Contact | null> {
 
-    console.log("getby id contact called");
     const contact = await this.findOne({
       filter: { id: id }
     });
-    console.log("contact is here",contact);
     return contact?.data || null;
   }
 
@@ -35,45 +33,6 @@ export class WaContactRepository extends WaBaseRepository<Contact> implements IC
   }
 
   async save(contact: Contact): Promise<void> {
-    console.log("are youy coming here");
-    // try {
-    //   await this.create({
-    //     values: {
-    //       id: contact.id,
-    //       data: contact,
-    //       name: contact.name,
-    //       notify: contact.notify,
-    //       verifiedName: contact.verifiedName,
-    //       imgUrl: contact.imgUrl,
-    //       status: contact.status
-    //     }
-    //   }, {
-    //     // Add upsert options
-    //     individualHooks: true,
-    //     updateOnDuplicate: ['data', 'name', 'notify', 'verifiedName', 'imgUrl', 'status']
-    //   });
-    // } catch (error) {
-    //   // Handle specific errors if needed
-    //   if (error.code === 'ER_DUP_ENTRY') {
-    //     // Update existing contact
-    //     await this.update({
-    //       values: {
-    //         data: contact,
-    //         name: contact.name || '',
-    //         notify: contact.notify || '',
-    //         verifiedName: contact.verifiedName || '',
-    //         imgUrl: contact.imgUrl || '',
-    //         status: contact.status || ''
-    //       },
-    //       filter: {
-    //         id: contact.id
-    //       }
-    //     });
-    //   } else {
-    //     //throw error;
-    //   }
-    // }
-
     return this.saveEntity(contact, contact.id, (contact) => ({
       id: contact.id,
       data: contact,

@@ -2,8 +2,10 @@
 import { LabelAssociation, LabelAssociationType } from '@adiwajshing/baileys/src/Types/LabelAssociation';
 import { Repository } from '@nocobase/database';
 import { ILabelAssociationRepository } from '../core/engines/noweb/store/ILabelAssociationsRepository';
+import { WaBaseRepository } from './repository.base';
 
-export class WaLabelAssociationRepository extends Repository implements ILabelAssociationRepository {
+
+export class WaLabelAssociationRepository extends WaBaseRepository<LabelAssociation> implements ILabelAssociationRepository {
   async deleteOne(association: LabelAssociation): Promise<void> {
     await this.destroy({
       filter: {
@@ -15,17 +17,36 @@ export class WaLabelAssociationRepository extends Repository implements ILabelAs
     });
   }
 
+  private getLabelAssociationData(association: LabelAssociation) {
+    return {
+      id: `${association.labelId}-${association.chatId}-${association.type}${association.messageId ? `-${association.messageId}` : ''}`,
+      data: association,
+      type: association.type,
+      labelId: association.labelId,
+      chatId: association.chatId,
+      messageId: association.messageId || null
+    };
+  }
+
   async save(association: LabelAssociation): Promise<void> {
-    await this.create({
-      values: {
-        id: `${association.labelId}-${association.chatId}-${association.type}`,
-        data: association,
-        type: association.type,
-        labelId: association.labelId,
-        chatId: association.chatId,
-        messageId: association.messageId
-      }
-    });
+    // await this.create({
+    //   values: {
+    //     id: `${association.labelId}-${association.chatId}-${association.type}`,
+    //     data: association,
+    //     type: association.type,
+    //     labelId: association.labelId,
+    //     chatId: association.chatId,
+    //     messageId: association.messageId
+    //   }
+    // });
+
+    const id = `${association.labelId}-${association.chatId}-${association.type}${association.messageId ? `-${association.messageId}` : ''}`;
+    await this.saveEntity(
+      association,
+      id,
+      this.getLabelAssociationData
+    );
+
   }
 
   async deleteByLabelId(labelId: string): Promise<void> {

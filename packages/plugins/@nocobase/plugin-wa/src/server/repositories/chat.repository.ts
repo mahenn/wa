@@ -6,7 +6,7 @@ import { PaginationParams } from '../structures/pagination.dto';
 
 export class WaChatRepository extends WaBaseRepository<Chat> implements IChatRepository {
   async save(chat: Chat): Promise<void> {
-    console.log("chat data here",chat);
+    // console.log("chat data here",chat);
     // try {
     //   // Check if chat already exists
     //   const existingChat = await this.findOne({
