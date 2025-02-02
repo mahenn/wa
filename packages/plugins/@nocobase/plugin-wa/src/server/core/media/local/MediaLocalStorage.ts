@@ -41,6 +41,9 @@ export class MediaLocalStorage implements IMediaStorage {
   public async save(buffer: Buffer, data: MediaData): Promise<boolean> {
     const filepath = this.getFullPath(data);
     const folder = path.dirname(filepath);
+
+    console.log("file saved at",folder,filepath);
+    
     await fsp.mkdir(folder, { recursive: true });
     await writeFileAtomic(filepath, buffer, (err) => {
       if (err) {

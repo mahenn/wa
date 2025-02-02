@@ -17,7 +17,8 @@ export class WaBaseRepository<T> extends Repository {
     if (options['pagination']) {
       const pagination = options['pagination'] as PaginationParams;
       options.sort = this.formatSortParams(pagination);
-      
+      options.limit = pagination.limit;
+      options.offset = pagination.offset;
       // Clean up pagination object to prevent conflicts
       delete options['pagination'];
     }
@@ -31,7 +32,8 @@ export class WaBaseRepository<T> extends Repository {
     if (options['pagination']) {
       const pagination = options['pagination'] as PaginationParams;
       options.sort = this.formatSortParams(pagination);
-      
+      options.limit = pagination.limit;
+      options.offset = pagination.offset;
       // Clean up pagination object to prevent conflicts
       delete options['pagination'];
     }

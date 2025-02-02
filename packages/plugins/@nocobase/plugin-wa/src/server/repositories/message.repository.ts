@@ -72,7 +72,6 @@ export class WaMessageRepository extends WaBaseRepository<WAMessage> implements 
       },
       pagination
     });
-    
     return rows.map(row => row.data);
   }
 

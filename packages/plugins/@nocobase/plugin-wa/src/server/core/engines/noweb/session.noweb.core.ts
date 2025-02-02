@@ -440,7 +440,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       const { connection, lastDisconnect, qr, isNewLogin } = update;
 
 
-    if (lastDisconnect?.error?.message === 'Timed Out') {
+    if (lastDisconnect?.error?.message === 'Timed Out' || lastDisconnect?.error?.message === 'Request Time-out') {
       this.logger.warn('Connection timed out, attempting restart...');
       this.restartClient();
       return;

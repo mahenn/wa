@@ -693,7 +693,7 @@ export class PluginWaServer extends Plugin {
       // const pagination: ChatsPaginationParams = { limit: 100, offset: 0  };
       // const chats =  await client.getChats(pagination);
 
-      const pagination: OverviewPaginationParams = { limit: 10, offset: 0  };
+      const pagination: OverviewPaginationParams = { limit: 100, offset: 0  };
       const chats: ChatSummary[] = await client.getChatsOverview(pagination);
 
       console.log(`Chats for sessionId: ${sessionId}`, chats.length);
@@ -716,7 +716,8 @@ export class PluginWaServer extends Plugin {
 
       const query = {
         session: sessionId ,
-        limit: 100,
+        limit: 50,
+        offset: offset,
         sortOrder: 'ASC',
         downloadMedia: true
       };

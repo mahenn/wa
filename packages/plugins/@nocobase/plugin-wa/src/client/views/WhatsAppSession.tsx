@@ -18,7 +18,12 @@ const WhatsAppSession = () => {
   const [retryAttempts, setRetryAttempts] = useState(0); // Track retry attempts
   const wsClient = useRef(useApp()?.ws);
   //const wsClient = useRef(window.app?.ws);
+  const [page, setPage] = useState(0);
+  const [hasMoreMessages, setHasMoreMessages] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+
   const sessionId = 'default';
+
 
   const loadMessages = useCallback((chatId: string, offset = 0) => {
     return new Promise((resolve, reject) => {
@@ -26,11 +31,31 @@ const WhatsAppSession = () => {
         reject(new Error('Invalid chatId'));
         return;
       }
+      setIsLoadingMore(true);
+
       wsClient.current?.send(JSON.stringify({ type: 'get-messages', chatId, sessionId, offset }));
       setSelectedChatId(chatId);
       resolve();
     });
   }, [sessionId]);
+
+  // Handle loading more messages
+  const handleLoadMore = useCallback(async () => {
+    if (!selectedChatId || isLoadingMore) return;
+    
+    const nextPage = page + 1;
+    const offset = nextPage * 50; // Assuming 50 messages per page
+    
+    try {
+      await loadMessages(selectedChatId, offset);
+      setPage(nextPage);
+    } catch (error) {
+      console.error('Error loading more messages:', error);
+    }
+  }, [selectedChatId, page, isLoadingMore, loadMessages]);
+
+
+
 
   const sendMessage = useCallback((chatId: string, messageContent: any) => {
     wsClient.current?.send(JSON.stringify({
@@ -54,8 +79,8 @@ const WhatsAppSession = () => {
   const updateChatsWithNewMessage = useCallback((chatId: string, message: any) => {
     setChats((prevChats) =>
       prevChats.map((chat) => {
-        if (chat.id._serialized === chatId) {
-          const isActiveChat = chat.id._serialized === selectedChatId;
+        if (chat.id === chatId) {
+          const isActiveChat = chat.id === selectedChatId;
           return {
             ...chat,
             lastMessage: message,
@@ -143,12 +168,29 @@ const WhatsAppSession = () => {
           console.log('Loaded messages:', data.chatId ,selectedChatId);
 
           if (data.chatId === selectedChatId) {
-            setChatMessages(data.messages);
-        //     setChatMessages((prevMessages) => [
-        //   ...data.messages, // Prepend older messages to the top
-        //   ...prevMessages,
-        // ]);
+            if (data.offset === 0) {
+              // New messages or initial load
+              setChatMessages(data.messages);
+            } else {
+              // Loading more messages
+              setChatMessages(prevMessages => {
+                // Remove duplicates and combine messages
+                const newMessages = data.messages.filter(
+                  newMsg => !prevMessages.some(
+                    existingMsg => existingMsg.id === newMsg.id
+                  )
+                );
+                return [...newMessages, ...prevMessages];
+              });
+            }
+            setHasMoreMessages(data.messages.length === 50); // Update hasMore based on received message count
+            setIsLoadingMore(false);
           }
+
+
+
+
+
           break;
 
         case 'error':
@@ -181,6 +223,16 @@ const WhatsAppSession = () => {
   //   }
   // }, [selectedChatId]);
   //selectedChatId, updateChatsWithNewMessage
+
+
+  // Reset pagination when changing chats
+  useEffect(() => {
+    setPage(0);
+    //setOffset(0);
+    setHasMoreMessages(true);
+    setChatMessages([]);
+  }, [selectedChatId]);
+
 
   // Handler for replying to a message
   const handleReplyToMessage = (message) => {
@@ -216,6 +268,9 @@ const WhatsAppSession = () => {
           onReplyToMessage={handleReplyToMessage} // Handle reply action
           onCancelReply={handleCancelReply} // Handle cancel reply action
           sendReaction={sendReaction}
+          hasMoreMessages={hasMoreMessages}
+          onLoadMore={handleLoadMore}
+          isLoadingMore={isLoadingMore}
         />
       )}
     </div>

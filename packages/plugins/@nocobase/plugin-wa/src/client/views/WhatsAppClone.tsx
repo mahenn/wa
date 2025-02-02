@@ -18,7 +18,10 @@ const WhatsAppClone = ({
   sessionId,
   replyToMessage,
   onReplyToMessage,
-  onCancelReply
+  onCancelReply,
+  hasMoreMessages,
+  onLoadMore,
+  isLoadingMore,
 }) => {
   const [selectedPage, setSelectedPage] = useState('chats'); // Default to chats view
   const [reactionToMessage, setReactionToMessage] = useState(null);
@@ -62,6 +65,9 @@ const WhatsAppClone = ({
                       onReplyToMessage={onReplyToMessage}
                       onReactToMessage={handleReactToMessage}
                       selectedChatId={selectedChatId}
+                      hasMoreMessages={hasMoreMessages}
+                      onLoadMore={onLoadMore}
+                      isLoadingMore={isLoadingMore}
                     />
                     <Footer style={{ padding: '10px', background: '#f0f0f0' }}>
                       <ChatInput
