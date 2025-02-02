@@ -374,6 +374,26 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     await this.ensureStore();
 
     this.sock = await this.makeSocket();
+
+
+    // Add middleware to catch send errors
+    const originalSend = this.sock.sendMessage;
+    this.sock.sendMessage = async (...args) => {
+      try {
+        return await originalSend.apply(this.sock, args);
+      } catch (error) {
+        if (error?.output?.statusCode === DisconnectReason.connectionClosed) {
+          this.logger.warn('Connection closed while sending message, attempting to reconnect...');
+          this.restartClient();
+          
+          // Retry the send after reconnection
+          return await this.sock.sendMessage(...args);
+        }
+        throw error;
+      }
+    };
+
+
     this.issueMessageUpdateOnEdits();
     this.issuePresenceUpdateOnMessageUpsert();
     if (this.isDebugEnabled()) {
@@ -441,6 +461,13 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
 
 
     if (lastDisconnect?.error?.message === 'Timed Out' || lastDisconnect?.error?.message === 'Request Time-out') {
+      this.logger.warn('Connection timed out, attempting restart...');
+      this.restartClient();
+      return;
+    }
+
+    if (lastDisconnect?.error?.output?.statusCode === DisconnectReason.connectionClosed)
+    {
       this.logger.warn('Connection timed out, attempting restart...');
       this.restartClient();
       return;
@@ -960,7 +987,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       // Get name by contact
       const jid = toJID(chat.id);
       const contact = await this.store.getContactById(jid);
-      name = contact?.name || contact?.notify;
+      name = contact?.name || contact?.notify ;
     }
 
 
@@ -970,7 +997,14 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       { limit: 1, offset: 0, sortOrder:'desc', downloadMedia: false },
       {},
     );
+
+
+
     const message = messages.length > 0 ? messages[0] : null;
+
+    if(!name)
+      name = message?._data.verifiedBizName;
+
     return {
       id: id,
       name: name || null,
@@ -1683,6 +1717,9 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
   }
 
   protected toWAMessage(message): Promise<WAMessage> {
+
+    //console.log("toWAmessage" ,message);
+
     const fromToParticipant = getFromToParticipant(message);
     const id = buildMessageId(message.key);
     const body = this.extractBody(message.message);
@@ -1707,6 +1744,8 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       location: message.location,
       vCards: message.vCards,
       replyTo: replyTo,
+      forwarded: this.extractForwarded(message.message),
+      forwardingScore: message.message?.contextInfo?.forwardingScore || 0,
       _data: message,
     });
   }
@@ -1745,12 +1784,25 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     if (!quotedMessage) {
       return null;
     }
+
     const body = this.extractBody(quotedMessage);
     return {
       id: contextInfo.stanzaId,
       participant: toCusFormat(contextInfo.participant),
       body: body,
+
     };
+  }
+
+  protected extractForwarded(message): ReplyToMessage | null {
+    const msgType = getContentType(message);
+    const contextInfo = message[msgType]?.contextInfo;
+    if (!contextInfo) {
+      return null;
+    }
+    const forwardedMessage = contextInfo.isForwarded;
+    
+    return forwardedMessage;
   }
 
   protected toWAContact(contact: Contact) {

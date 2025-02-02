@@ -3,6 +3,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { List, Typography, Button, Divider } from 'antd';
 import moment from 'moment';
 import { css } from '@emotion/css';
+import MessageMenu from './MessageMenu';
+import { message as antMessage } from 'antd';
+import { ForwardOutlined, AudioOutlined } from '@ant-design/icons';
 
 const { Text } = Typography;
 
@@ -78,6 +81,91 @@ const chatWindowStyles = css`
     width: 100%;
   }
 
+  .message {
+    position: relative;
+    
+    .message-content {
+      position: relative;
+      padding: 8px 12px;
+      border-radius: 8px;
+      margin: 4px 8px;
+      max-width: 65%;
+      word-wrap: break-word;
+
+      .message-menu {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        opacity: 0;
+        transition: opacity 0.2s;
+        z-index: 1;
+      }
+
+      &:hover .message-menu {
+        opacity: 1;
+      }
+
+      .reply-snippet {
+        background: rgba(0, 0, 0, 0.05);
+        border-left: 4px solid #128C7E;
+        padding: 8px;
+        margin-bottom: 8px;
+        border-radius: 4px;
+        cursor: pointer;
+
+        &:hover {
+          background: rgba(0, 0, 0, 0.08);
+        }
+      }
+    }
+
+    &.sent {
+      .message-content {
+        background: #dcf8c6;
+        margin-left: auto;
+      }
+    }
+
+    &.received {
+      .message-content {
+        background: #fff;
+      }
+    }
+  
+
+      .message-reactions {
+        display: flex;
+        gap: 4px;
+        margin-top: 4px;
+        flex-wrap: wrap;
+
+        .reaction {
+          background: rgba(0, 0, 0, 0.05);
+          padding: 2px 6px;
+          border-radius: 10px;
+          font-size: 12px;
+          display: flex;
+          align-items: center;
+          gap: 4px;
+
+          .reaction-count {
+            color: #667781;
+          }
+        }
+      }
+    }
+
+  @keyframes highlight-message {
+    0% { background-color: rgba(255, 251, 0, 0.3); }
+    100% { background-color: transparent; }
+  }
+
+  .message {
+    &.highlight {
+      animation: highlight-message 1s ease-out;
+    }
+  }
+  
 `;
 
 interface ChatWindowProps {
@@ -93,11 +181,141 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
   onLoadMore,
   hasMoreMessages,
   loading = false,
+  onReplyToMessage,
+  onScrollToMessage
 }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [autoScroll, setAutoScroll] = useState(true);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+
+  const handleReplyClick = (replyToMessageId: string) => {
+    const originalMessage = chatMessages.find(msg => msg.id.includes(replyToMessageId));
+    if (originalMessage) {
+      const messageElement = document.getElementById(`message-${originalMessage.id}`);
+      if (messageElement) {
+        messageElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        messageElement.classList.add('highlight');
+        setTimeout(() => {
+          messageElement.classList.remove('highlight');
+        }, 2000);
+      }
+    }
+  };
+
+  const parseWhatsAppFormatting = (text) => {
+    if (!text) return text;
+
+    // Replace bold (*text*) with <b>text</b>
+    let formattedText = text.replace(/\*([^*]+)\*/g, '<b>$1</b>');
+
+    // Replace italic (_text_) with <i>text</i>
+    formattedText = formattedText.replace(/_([^_]+)_/g, '<i>$1</i>');
+
+    // Replace strikethrough (~text~) with <s>text</s>
+    formattedText = formattedText.replace(/~([^~]+)~/g, '<s>$1</s>');
+
+    // Replace monospace (`text`) with <code>text</code>
+    formattedText = formattedText.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Automatically convert URLs into clickable links
+    formattedText = formattedText.replace(
+      /(https?:\/\/[^\s]+)/g,
+      '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
+    );
+
+    return formattedText;
+  };
+  
+  const handleReply = (message: any) => {
+    onReplyToMessage(message);
+  };
+
+  const handleDownload = async (message: any) => {
+    if (message.hasMedia) {
+      try {
+        const response = await fetch(message.media.url);
+        const blob = await response.blob();
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = message.media.filename || 'download';
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+      } catch (error) {
+        antMessage.error('Failed to download media');
+      }
+    }
+  };
+
+  const handleForward = (message: any) => {
+    // Implement forward functionality using the API
+    // You'll need to show a modal to select contacts/chats to forward to
+    //console.log('Forward message:', message);
+  };
+
+  const handleDelete = async (message: any) => {
+    try {
+      // Call the delete message API
+      await window.app?.ws.send(JSON.stringify({
+        type: 'delete-message',
+        chatId: selectedChatId,
+        messageId: message.id,
+        sessionId: sessionId,
+      }));
+      // Update the messages list
+      setChatMessages(prevMessages => 
+        prevMessages.filter(msg => msg.id !== message.id)
+      );
+      antMessage.success('Message deleted successfully');
+    } catch (error) {
+      antMessage.error('Failed to delete message');
+    }
+  };
+
+  const renderReplySnippet = (replyTo: ReplyToMessage) => {
+    if (!replyTo) return null;
+    
+    return (
+      <div className="reply-snippet"  onClick={() => handleReplyClick(replyTo.id)}>
+        <div className="reply-header">
+          <span className="reply-author">{replyTo.fromMe ? 'You' : replyTo.from}</span>
+        </div>
+        {replyTo.hasMedia && (
+          <div className="reply-media">
+            {replyTo.media?.mimetype?.includes('image') && (
+              <img src={replyTo.media?.url} alt="Reply media" />
+            )}
+            {replyTo.media?.mimetype?.includes('video') && (
+              <span><VideoOutlined /> Video</span>
+            )}
+            {replyTo.media?.mimetype?.includes('audio') && (
+              <span><AudioOutlined /> Audio</span>
+            )}
+          </div>
+        )}
+        <div className="reply-text">{replyTo.body}</div>
+      </div>
+    );
+  };
+
+  // Add this helper function to render reactions
+  const renderReactions = (reactions) => {
+    if (!reactions || reactions.length === 0) return null;
+    
+    return (
+      <div className="message-reactions">
+        {reactions.map((reaction, index) => (
+          <span key={index} className="reaction">
+            {reaction.emoji}
+            <span className="reaction-count">{reaction.count}</span>
+          </span>
+        ))}
+      </div>
+    );
+  };
 
   // Add this new useEffect ⬇️
   useEffect(() => {
@@ -206,8 +424,6 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     );
   };
 
- console.log("group messages",groupMessagesByDate(chatMessages));
-
   return (
     <div 
       className={chatWindowStyles}
@@ -232,11 +448,27 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
         <div key={date} className="message-group">
           {renderDateSeparator(date)}
           {msgs.map((message) => (
-            <div
-              key={message.id}
-              className={`message ${message.fromMe ? 'sent' : ''}`}
-            >{console.log(message)}
+            <div key={message.id} id={`message-${message.id}`} className={`message ${message.fromMe ? 'sent' : ''}`}>
               <div className={`message-content ${message.fromMe ? 'sent' : ''}`}>
+                <div className="message-menu">
+                  {message.id && (
+                    <MessageMenu
+                      message={message}
+                      onReply={handleReply}
+                      onDownload={handleDownload}
+                      onForward={handleForward}
+                      onDelete={handleDelete}
+                    />
+                  )}
+                </div>
+                {message.forwarded && (
+                <div className="forwarded-label">
+                  <ForwardOutlined /> Forwarded
+                </div>
+              )}
+              
+              {message.replyTo && renderReplySnippet(message.replyTo)}
+
                 {message.hasMedia && (
                   <div className="media-container">
                     {message.media.mimetype?.includes('image') && (
@@ -255,12 +487,16 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                     )}
                   </div>
                 )}
-                <div className="message-text">{message.body }{message.mimetype}</div>
+                <div className="message-text"
+                  dangerouslySetInnerHTML={{ __html: parseWhatsAppFormatting(message.body) }}
+                  style={{ whiteSpace: 'pre-wrap' }} // Maintain line breaks
+                />
                
                 <div className="message-meta">
                   {moment(message.timestamp * 1000).format('HH:mm')}
                   {message.ack && <span className="message-status">{message.ackName}</span>}
                 </div>
+                {renderReactions(message.reactions)}
               </div>
             </div>
           ))}

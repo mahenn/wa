@@ -35,19 +35,36 @@ const WhatsAppClone = ({
     loadMessages(chatId);
   };
 
-  const handleReactToMessage = (messageId, emoji) => {
-    console.log(`React to message ${messageId} with ${emoji}`);
-    setReactionToMessage({ messageId, emoji });
+  // const handleReactToMessage = (messageId, emoji) => {
+  //   console.log(`React to message ${messageId} with ${emoji}`);
+  //   setReactionToMessage({ messageId, emoji });
 
-    // Send the reaction to WebSocket server
-    window.app?.ws.send(
-      JSON.stringify({
+  //   // Send the reaction to WebSocket server
+  //   window.app?.ws.send(
+  //     JSON.stringify({
+  //       type: 'react-to-message',
+  //       chatId: selectedChatId,
+  //       content: { messageId, emoji },
+  //       sessionId,
+  //     })
+  //   );
+  // };
+
+  const handleReactToMessage = async (messageId: string, emoji: string) => {
+    try {
+      await window.app?.ws.send(JSON.stringify({
         type: 'react-to-message',
         chatId: selectedChatId,
-        content: { messageId, emoji },
+        messageId,
+        reaction: {
+          text: emoji,
+          messageId
+        },
         sessionId,
-      })
-    );
+      }));
+    } catch (error) {
+      console.error('Failed to react to message:', error);
+    }
   };
 
   return (

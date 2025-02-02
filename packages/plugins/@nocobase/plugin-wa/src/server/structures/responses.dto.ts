@@ -101,6 +101,16 @@ export class WAMessage extends WAMessageBase {
 
   replyTo?: ReplyToMessage;
 
+  @ApiProperty({
+    description: 'Indicates if the message was forwarded',
+  })
+  forwarded?: boolean;
+
+  @ApiProperty({
+    description: 'Number of times the message was forwarded',
+  })
+  forwardingScore?: number;
+
   /** Returns message in a raw format */
   @ApiProperty({
     description:
