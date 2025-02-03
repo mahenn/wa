@@ -36,8 +36,8 @@ const ContactsSidebar = ({ chats, onSelectChat }) => {
 
   // Helper function to determine the media type and render the appropriate icon
   const renderMediaIcon = (lastMessage) => {
-    if (!lastMessage || !lastMessage.hasMedia || !lastMessage.type) return null;
-    const mimeType = lastMessage.type;
+    if (!lastMessage || !lastMessage.hasMedia || !lastMessage.media.mimetype) return null;
+    const mimeType = lastMessage.media.mimetype;
     if (mimeType.includes('image')) return <CameraOutlined />;
     if (mimeType.includes('video')) return <VideoCameraOutlined />;
     if (mimeType.includes('audio')) return <AudioOutlined />;

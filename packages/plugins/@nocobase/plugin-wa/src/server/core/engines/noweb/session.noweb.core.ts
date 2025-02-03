@@ -375,25 +375,6 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
 
     this.sock = await this.makeSocket();
 
-
-    // Add middleware to catch send errors
-    const originalSend = this.sock.sendMessage;
-    this.sock.sendMessage = async (...args) => {
-      try {
-        return await originalSend.apply(this.sock, args);
-      } catch (error) {
-        if (error?.output?.statusCode === DisconnectReason.connectionClosed) {
-          this.logger.warn('Connection closed while sending message, attempting to reconnect...');
-          this.restartClient();
-          
-          // Retry the send after reconnection
-          return await this.sock.sendMessage(...args);
-        }
-        throw error;
-      }
-    };
-
-
     this.issueMessageUpdateOnEdits();
     this.issuePresenceUpdateOnMessageUpsert();
     if (this.isDebugEnabled()) {
@@ -454,13 +435,25 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     });
   }
 
+  private isConnectionError(error: any): boolean {
+    return (
+      error?.output?.statusCode === DisconnectReason.connectionClosed ||
+      error?.output?.statusCode === DisconnectReason.connectionLost ||
+      error?.output?.statusCode === DisconnectReason.timedOut ||
+      error?.message === 'Timed Out' ||
+      error?.message === 'Request Time-out' ||
+      error?.code === 'ECONNRESET'
+    );
+  }
+
   protected listenConnectionEvents() {
     this.logger.debug(`Start listening ${BaileysEvents.CONNECTION_UPDATE}...`);
     this.sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr, isNewLogin } = update;
 
 
-    if (lastDisconnect?.error?.message === 'Timed Out' || lastDisconnect?.error?.message === 'Request Time-out') {
+    //if (lastDisconnect?.error?.message === 'Timed Out' || lastDisconnect?.error?.message === 'Request Time-out') {
+    if (this.isConnectionError(lastDisconnect?.error)) {
       this.logger.warn('Connection timed out, attempting restart...');
       this.restartClient();
       return;
@@ -508,6 +501,14 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
         this.qr.save(url, qr);
         this.printQR(this.qr);
         this.status = WAHASessionStatus.SCAN_QR_CODE;
+      }
+    });
+
+     // Add error event listener
+    this.sock.ev.on('error', async (error) => {
+      this.logger.error('Socket error:', error);
+      if (this.isConnectionError(error)) {
+        this.restartClient();
       }
     });
   }
@@ -997,8 +998,6 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       { limit: 1, offset: 0, sortOrder:'desc', downloadMedia: false },
       {},
     );
-
-
 
     const message = messages.length > 0 ? messages[0] : null;
 

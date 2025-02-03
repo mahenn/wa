@@ -152,6 +152,27 @@ const chatWindowStyles = css`
             color: #667781;
           }
         }
+
+        .message-reactions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+        margin-top: 4px;
+        
+        .reaction {
+          background-color: #e8e8e8;
+          padding: 2px 6px;
+          border-radius: 10px;
+          font-size: 12px;
+          display: inline-flex;
+          align-items: center;
+          
+          &:hover {
+            background-color: #d8d8d8;
+          }
+        }
+      }
+
       }
     }
 
@@ -165,6 +186,8 @@ const chatWindowStyles = css`
       animation: highlight-message 1s ease-out;
     }
   }
+
+
   
 `;
 
@@ -308,8 +331,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     return (
       <div className="message-reactions">
         {reactions.map((reaction, index) => (
-          <span key={index} className="reaction">
-            {reaction.emoji}
+           <span key={`${reaction.messageId}-${index}`} className="reaction">
+            {reaction.text}
             <span className="reaction-count">{reaction.count}</span>
           </span>
         ))}
@@ -450,6 +473,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
           {msgs.map((message) => (
             <div key={message.id} id={`message-${message.id}`} className={`message ${message.fromMe ? 'sent' : ''}`}>
               <div className={`message-content ${message.fromMe ? 'sent' : ''}`}>
+              {console.log(message)}
                 <div className="message-menu">
                   {message.id && (
                     <MessageMenu
@@ -496,7 +520,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                   {moment(message.timestamp * 1000).format('HH:mm')}
                   {message.ack && <span className="message-status">{message.ackName}</span>}
                 </div>
-                {renderReactions(message.reactions)}
+                {message._data.reactions && renderReactions(message._data.reactions)}
               </div>
             </div>
           ))}
