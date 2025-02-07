@@ -1,0 +1,134 @@
+/*
+.chat-window {
+  height: calc(100vh - 100px); /* Subtract any fixed header/footer or padding */
+  overflow-y: auto;
+  padding: 1px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column; /* To make sure messages align properly */
+}
+
+
+.chat-window .chat-message a {
+  word-wrap: break-word; /* Allow long words to wrap */
+  overflow-wrap: break-word; /* Ensure the word or link wraps within the container */
+  word-break: break-all; /* Break the word if necessary */
+  text-decoration: none; /* Remove default link underlines, add this if you want */
+  color: #1e90ff; /* Optional: Make links visually stand out */
+}
+
+.chat-window .chat-message {
+  display: flex !important; /* Force flex for chat message alignment */
+  justify-content: flex-start;
+}
+
+.chat-message.from-me {
+  justify-content: flex-end !important; /* Align messages from me to the right */
+}
+
+.chat-message .ant-list-item-meta {
+  display: flex !important;
+  align-items: center;
+  flex-direction: column !important;
+  text-align: left;
+}
+
+.chat-message .from-others {
+  text-align: left;
+}
+
+.message-list {
+  flex-grow: 1;
+  overflow-y: auto;
+  padding: 10px;
+}
+
+.element {
+  padding:0px;
+}
+
+.message {
+  width: 350px;
+  margin-bottom: 10px;
+  padding: 8px;
+  border-radius: 5px;
+}
+
+.message-from-me {
+  background-color: #e6f7ff;
+  padding: 8px;
+  margin-bottom: 5px;
+  border-radius: 8px;
+}
+
+.message-from-them {
+  background-color: #fff;
+  padding: 8px;
+  margin-bottom: 5px;
+  border-radius: 8px;
+}
+
+.message-image,
+.message-video,
+.message-audio {
+  max-width: 100%;
+  border-radius: 5px;
+}
+
+.message-input {
+  display: flex;
+  border-top: 1px solid #ccc;
+  padding: 10px;
+  background-color: #fff; /* Ensure it's separated from the chat area */
+  position: sticky; /* Ensure input stays at the bottom */
+  bottom: 0;
+}
+
+.message-input input {
+  flex-grow: 1;
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  margin-right: 10px;
+}
+
+
+
+
+.chat-message.forwarded {
+  font-style: italic;
+  border-left: 2px solid #d3d3d3;
+  padding-left: 10px;
+}
+
+.replied-message {
+  font-size: 0.85em;
+  color: #7a7a7a;
+  margin-bottom: 5px;
+  padding-left: 5px;
+  border-left: 3px solid #ccc;
+}
+
+.chat-message .ant-dropdown-menu {
+  background-color: #fff; /* Background color */
+  border-radius: 4px; /* Rounded corners */
+}
+
+.chat-message .ant-dropdown-menu-item {
+  padding: 10px; /* Padding for menu items */
+  color: #000; /* Text color */
+}
+
+
+.sider-menu {
+  height: 100vh; /* Ensure the menu takes up the full height */
+  overflow-y: auto; /* Allow scrolling within the sidebar */
+  position: fixed; /* Keep the sidebar in place */
+  left: 0;
+  top: 0;
+  background-color: #202c33; /* Or any color for the sidebar */
+}
+
+*/
