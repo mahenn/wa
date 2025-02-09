@@ -190,8 +190,10 @@ const PresenceStatuses = {
 const ToEnginePresenceStatus = flipObject(PresenceStatuses);
 
 export class WhatsappSessionNoWebCore extends WhatsappSession {
-  private START_ATTEMPT_DELAY_SECONDS = 2;
-  private AUTO_RESTART_AFTER_SECONDS = 28 * 60;
+  //private START_ATTEMPT_DELAY_SECONDS = 2;
+  private START_ATTEMPT_DELAY_SECONDS = 5;
+  //private AUTO_RESTART_AFTER_SECONDS = 28 * 60;
+  private AUTO_RESTART_AFTER_SECONDS =  60;
 
   engine = WAHAEngine.NOWEB;
   authFactory = new NowebAuthFactoryCore();

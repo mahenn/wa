@@ -1,17 +1,29 @@
 import React, { useState } from 'react';
-import { Input, Button, Upload, Typography } from 'antd';
-import { UploadOutlined, CloseCircleOutlined } from '@ant-design/icons';
+import { Input, Button, Upload, Typography,message } from 'antd';
+import { UploadOutlined, CloseCircleOutlined, SendOutlined, 
+  PaperClipOutlined } from '@ant-design/icons';
 
+
+interface ChatInputProps {
+  onSendMessage: (message: any) => void;
+  replyToMessage?: any;
+  onCancelReply?: () => void;
+}
 
 const { Text } = Typography;
 
-const ChatInput = ({ onSendMessage, replyToMessage, onCancelReply }) => {
+
+
+const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, replyToMessage, onCancelReply }) => {
   const [message, setMessage] = useState('');
   const [uploadedFile, setUploadedFile] = useState(null); // Store the uploaded file
   const [fileError, setFileError] = useState(false); // Track file encoding errors
 
   const handleSend = () => {
-    if (message.trim() || uploadedFile) {  // Ensure there's either a message or a file
+    if (!message.trim() && !uploadedFile) return;
+
+     try
+     {  // Ensure there's either a message or a file
       if (uploadedFile) {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -44,11 +56,13 @@ const ChatInput = ({ onSendMessage, replyToMessage, onCancelReply }) => {
         onSendMessage({
           type: 'text',
           content: message,
-          replyTo: replyToMessage ? replyToMessage.id : null,
+          replyTo: replyToMessage?.id,
         });
         setMessage('');
         onCancelReply(); // Clear reply after sending
       }
+    } catch (error) {
+      message.error('Failed to send message');
     }
   };
  
@@ -72,17 +86,30 @@ const ChatInput = ({ onSendMessage, replyToMessage, onCancelReply }) => {
         <Input
           value={message}
           onChange={(e) => setMessage(e.target.value)}
-          onPressEnter={handleSend}
+          onPressEnter={(e) => {
+            if (!e.shiftKey) {
+              e.preventDefault();
+              handleSend();
+            }
+          }}
+          //onPressEnter={handleSend}
           placeholder="Type a message..."
+          autoSize={{ maxRows: 4 }}
           style={{ flexGrow: 1, marginRight: '10px' }}
         />
-        <Upload beforeUpload={handleUpload} showUploadList={false}>
+        <Upload beforeUpload={handleUpload} showUploadList={false} accept="image/*,video/*,application/*">
           <Button icon={<UploadOutlined />} />
         </Upload>
         <Button type="primary" onClick={handleSend}>
           Send
         </Button>
       </div>
+      {uploadedFile && (
+        <div className="media-preview">
+          <span>{uploadedFile.name}</span>
+          <CloseCircleOutlined onClick={() => setUploadedFile(null)} />
+        </div>
+      )}
       {fileError && <div style={{ color: 'red' }}>Invalid file encoding. Please try again.</div>}
     </div>
   );

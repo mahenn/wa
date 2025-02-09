@@ -191,7 +191,7 @@ export class PluginWaServer extends Plugin {
 
           case 'new-message':
             console.log(`new message received : ${sessionId}`,content);
-            //await this.handleSendMessage(socket, chatId, content, sessionId);
+            await this.handleSendMessage(socket, chatId, content, sessionId);
             break;
 
           case 'get-contacts':
@@ -727,48 +727,6 @@ export class PluginWaServer extends Plugin {
       //const messages = await client.getChatMessages(chatId, query.limit, query.downloadMedia);
       const messages = await client.getChatMessages(chatId, query, filter)
 
-
-      // if (messages && Array.isArray(messages)) {
-      //   console.error(`fetching messages for offset now: ${offset}`,messages.length);
-      // }
-      // const processedMessages = await Promise.all(
-      //   messages.map(async (message) => {
-      //     let reactions = [];
-      //     if (message.hasReaction) {
-      //       try {
-      //         reactions = await message.getReactions();
-      //       } catch (error) {
-      //         console.error(`Error fetching reactions for message: ${message.id._serialized}`, error);
-      //       }
-      //     }
-
-      //     if (message.hasMedia) {
-      //       try {
-      //         const media = await message.downloadMedia();
-      //         console.log("check downloaded content",media);
-      //          return {
-      //         ...message,
-      //         mediaData: media && media.data ? media.data : null, // Base64-encoded media data or null
-      //         mediaType: media && media.mimetype ? media.mimetype : null, // Mime type or null
-      //       };
-      //     } catch (error) {
-      //       //console.error(`Error downloading media for message: ${message.id._serialized}`, error);
-      //       return {
-      //         ...message,
-      //         mediaData: null,
-      //         mediaType: null,
-      //           reactions
-      //         };
-      //       }
-      //     }
-
-      //     return {
-      //       ...message,
-      //       reactions, // Add reactions if available
-      //     };
-      //   })
-      // );
-
       if (socket.readyState === WebSocket.OPEN) {
         socket.send(JSON.stringify({
           type: 'messages',
@@ -785,6 +743,100 @@ export class PluginWaServer extends Plugin {
         }));
       }
     }
+  }
+
+
+  private async handleSendMessage(socket: WebSocket, chatId: string, messageData: any, sessionId: string) {
+    
+    const client = await this.sessionManager.getSession(sessionId);
+
+    if (!client) {
+      console.error(`Session not found for sessionId: ${sessionId}`);
+      return;
+    }
+
+    const { type, content, replyTo } = messageData;
+
+    switch (type) {
+        case 'text':
+
+          try {
+            const result = await client.sendText({
+              chatId,
+              text:content
+            });
+            const message = await client.toWAMessage(result);
+            console.log("send message here",message);
+            
+        socket.send(JSON.stringify({ type: 'message-sent', chatId, message }));
+
+          } catch (error) {
+            console.log("error in sending message",error.message);
+          }
+          // await api.resource('wachat').sendText({
+          //   session: sessionId,
+          //   chatId: selectedChatId,
+          //   text: content
+          // });
+           break;
+          
+        // case 'image':
+        //   await api.resource('wachat').sendImage({
+        //     session: sessionId,
+        //     chatId: selectedChatId,
+        //     file: content,
+        //     caption: messageData.caption
+        //   });
+        //   break;
+          
+        // case 'video':
+        //   await api.resource('wachat').sendVideo({
+        //     session: sessionId,
+        //     chatId: selectedChatId,
+        //     file: content,
+        //     caption: messageData.caption
+        //   });
+        //   break;
+          
+        // case 'file':
+        //   await api.resource('wachat').sendFile({
+        //     session: sessionId,
+        //     chatId: selectedChatId,
+        //     file: content
+        //   });
+        //   break;
+      }
+
+
+
+    // let message;
+    // try {
+    //   let options: any = {};
+    //   if (content.replyTo) {
+    //     const quotedMessage = await client.getMessageById(content.replyTo._serialized);
+    //     if (quotedMessage) {
+    //       options.quotedMessageId = quotedMessage.id._serialized;
+    //     }
+    //   }
+    //   if (content.type === 'text') {
+    //     message = await client.sendMessage(chatId, content.content, options);
+    //   } else if (content.type === 'media') {
+    //     // Handle media message
+    //     const media = new MessageMedia(content.media.mimetype, content.content, content.media.filename);
+    //     message = await client.sendMessage(chatId, media, { caption: content.media.caption || '', ...options });
+    //   } else {
+    //     message = await client.sendMessage(chatId, content.content, options);
+    //     console.log("Sent other message", message);
+    //   }
+
+    //   socket.send(JSON.stringify({ type: 'message-sent', chatId, message }));
+    // } catch (error) {
+    //   console.error('Error sending message:', error);
+    //   socket.send(JSON.stringify({
+    //     type: 'error',
+    //     message: 'Error sending message.',
+    //   }));
+    // }
   }
 
   async install() {}

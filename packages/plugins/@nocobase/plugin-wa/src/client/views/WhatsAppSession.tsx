@@ -98,25 +98,41 @@ const WhatsAppSession: React.FC = () => {
   }, [sessionId]);
 
   const updateChatsWithNewMessage = useCallback((chatId: string, message: any) => {
-    setChats((prevChats) =>
-      prevChats.map((chat) => {
-        if (chat.id === chatId) {
-          const isActiveChat = chat.id === selectedChatId;
-          return {
-            ...chat,
-            lastMessage: message,
-            unreadCount: isActiveChat ? 0 : (chat.unreadCount || 0) + 1,
-          };
-        }
-        return chat;
-      })
-    );
+  setChats((prevChats) => {
+    return prevChats.map((chat) => {
+      if (chat.id === chatId) {
+        // Update chat with new message
+        return {
+          ...chat,
+          lastMessage: message,
+          // Increment unread count only if it's not the selected chat
+          unreadCount: chat.id === selectedChatId 
+            ? 0 
+            : (chat.unreadCount || 0) + 1,
+          timestamp: message.timestamp
+        };
+      }
+      return chat;
+    }).sort((a, b) => {
+      // Sort chats by latest message timestamp
+      const timeA = a.lastMessage?.timestamp || 0;
+      const timeB = b.lastMessage?.timestamp || 0;
+      return timeB - timeA;
+    });
+  });
 
-    if (chatId === selectedChatId) {
-      setChatMessages((prevMessages) => [...prevMessages, message]);
-    }
-  }, [selectedChatId]);
-
+  // Update chat messages if this is the selected chat
+  if (chatId === selectedChatId) {
+    setChatMessages((prevMessages) => {
+      // Check if message already exists to avoid duplicates
+      const messageExists = prevMessages.some(msg => msg.id === message.id);
+      if (messageExists) {
+        return prevMessages;
+      }
+      return [...prevMessages, message];
+    });
+  }
+}, [selectedChatId]);
   const sessionStartSent = useRef(false);
 
 
@@ -150,6 +166,7 @@ const WhatsAppSession: React.FC = () => {
 
       switch (data.type) {
         case 'qr':
+
           setLoading(false);
           setQrCode(data.qr);
           setIsReady(false);
@@ -182,8 +199,8 @@ const WhatsAppSession: React.FC = () => {
           updateChatsWithNewMessage(data.message.from, data.message);
           break;
         case 'message-sent':
-          console.log('Message sent:', data.message);
-          updateChatsWithNewMessage(data.message.to, data.message);
+          console.log('Message sent:', data);
+          updateChatsWithNewMessage(data.to, data);
           break;
         case 'messages':
           console.log('Loaded messages:', data.chatId ,selectedChatId);

@@ -451,7 +451,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
     setAutoScroll(Math.abs(scrollHeight - clientHeight - scrollTop) < 100);
     
     // Load more messages when scrolling to top
-    if (scrollTop === 0 && hasMoreMessages && !loading) {
+    if (scrollTop === 0 && hasMoreMessages && loading) {
       loadMoreMessages();
     }
   };

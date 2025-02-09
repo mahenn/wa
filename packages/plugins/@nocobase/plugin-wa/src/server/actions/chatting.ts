@@ -13,6 +13,7 @@ import {
 } from '../structures/chatting.dto';
 
 export class ChattingController {
+  
   async sendText(ctx: Context, next: Next) {
     const { session } = ctx.action.params;
     const body = ctx.request.body as MessageTextRequest;
