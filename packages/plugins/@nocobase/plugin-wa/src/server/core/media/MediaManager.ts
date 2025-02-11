@@ -143,8 +143,8 @@ export class MediaManager implements IMediaManager {
       media.filename = processor.getFilename(message);
       media.mimetype = processor.getMimetype(message);
       media.filename = processor.getFilename(message);
-      //const data = await this.processMediaInternal(processor, message, session);
-      //media = { ...media, ...data }; @mahen
+      const data = await this.processMediaInternal(processor, message, session);
+      media = { ...media, ...data }; 
     } catch (err) {
       this.log.error(err, `Error processing media for message '${messageId}'`);
       media.error = err;

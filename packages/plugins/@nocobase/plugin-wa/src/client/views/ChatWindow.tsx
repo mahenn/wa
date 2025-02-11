@@ -5,11 +5,10 @@ import moment from 'moment';
 import { css } from '@emotion/css';
 import MessageMenu from './MessageMenu';
 import { message as antMessage } from 'antd';
-import { ForwardOutlined, AudioOutlined, VideoCameraOutlined } from '@ant-design/icons';
+import { ForwardOutlined, AudioOutlined, VideoCameraOutlined,CheckOutlined } from '@ant-design/icons';
+import { WAMessageAck } from '../../server/structures/enums.dto';
 
 const { Text } = Typography;
-
-
 
 const chatWindowStyles = css`
   height: calc(100vh - 150px);
@@ -56,7 +55,6 @@ const chatWindowStyles = css`
 
     .message-meta {
       font-size: 11px;
-      color: #667781;
       margin-top: 4px;
       text-align: right;
     }
@@ -189,8 +187,6 @@ const chatWindowStyles = css`
     }
   }
 
-
-  
 `;
 
 
@@ -225,6 +221,57 @@ interface ChatWindowProps {
 
 //const [chatMessages, setChatMessages] = useState<any>([]); // if using local state
 
+// Add the MessageTicks component within ChatWindow.tsx
+const MessageTicks = ({ ack }) => {
+  const tickStyles = css`
+    .message-ticks {
+      margin-left: 4px;
+      display: inline-flex;
+      align-items: center;
+      
+      &.single {
+        color: #a5a5a5;
+      }
+      
+      &.double {
+        color: #a5a5a5;
+      }
+      
+      &.read {
+        color: #53bdeb;
+      }
+      
+      .tick {
+        font-size: 14px;
+        &:last-child {
+          margin-left: -4px;
+        }
+      }
+    }
+  `;
+
+  const getTicksClass = (ack) => {
+    switch (ack) {
+      case 1: return 'single';  // Sent
+      case 2: return 'double';  // Delivered
+      case 3: return 'read';    // Read
+      default: return 'single'; // Pending/Error
+    }
+  };
+
+  if (!ack) return null;
+
+  return (
+    <span className={`message-ticks ${tickStyles} ${getTicksClass(ack)}`}>
+      {ack >= 1 && (
+        <>
+          <CheckOutlined className="tick" />
+          {ack >= 2 && <CheckOutlined className="tick" />}
+        </>
+      )}
+    </span>
+  );
+};
 
 const ChatWindow: React.FC<ChatWindowProps> = ({
   chatMessages,
@@ -548,8 +595,8 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                 />
                
                 <div className="message-meta">
-                  {moment(message.timestamp * 1000).format('HH:mm')}
-                  {message.ack && <span className="message-status">{message.ackName}</span>}
+                  {moment(message.timestamp * 1000).format('HH:mm')}&nbsp;&nbsp;
+                  {message.fromMe && <MessageTicks ack={message.ack} />}
                 </div>
                 {message._data.reactions && renderReactions(message._data.reactions)}
               </div>

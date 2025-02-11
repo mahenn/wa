@@ -1,5 +1,8 @@
 import { Plugin } from '@nocobase/client';
+import WhatsAppSessionManager from './views/WhatsAppSessionManager';
 import WhatsAppSession from './views/WhatsAppSession';
+import WhatsAppQRCode from './views/WhatsAppQRCode';
+import WhatsAppQRCodeModal from './views/WhatsAppQRCodeModal';
 import { tval } from '@nocobase/utils/client';
 import React from 'react';
 
@@ -20,7 +23,7 @@ export class PluginWhatsAppClient extends Plugin {
     this.app.pluginSettingsManager.add('whatsapp', {
       title: tval('Whatsapp', { ns: 'Whatsapp' }),
       icon: 'ClusterOutlined',
-      Component: WhatsAppSession,
+      Component: WhatsAppSessionManager,
     })
 
     // Add a settings page for the plugin in the settings menu

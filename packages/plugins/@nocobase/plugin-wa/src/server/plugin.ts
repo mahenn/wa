@@ -95,6 +95,9 @@ export class PluginWaServer extends Plugin {
     // @ts-expect-error
     this.app.sessionManager = this.sessionManager;
 
+    const session: string = 'default';
+    const events: WAHAEvents[] = '*';
+    
     //console.log(this.sessionManager);
 
     // Handle session startup
@@ -133,7 +136,6 @@ export class PluginWaServer extends Plugin {
     console.log('Client connected to WebSocket');
 
 
-
     // const sub = this.sessionManager.getSessionEvents("default", '*')
     //   .subscribe((data) => {
     //     this.logger.debug(`Sending data to client, event.id: ${data.id}`, data);
@@ -145,7 +147,31 @@ export class PluginWaServer extends Plugin {
     //     });
     //   });
 
-
+    // Subscribe to session events using sessionManager
+              const subscription = this.app.sessionManager
+                .getSessionEvents(session, events)
+                .subscribe({
+                  next: (data) => {
+                    try {
+                      //this.logger.debug(`Sending event to client, event.id: ${data.id}`, data);
+                      console.log(`Sending event to client, event.id: ${data.id}`, data);
+                      if (socket.readyState === WebSocket.OPEN) {
+                        socket.send(JSON.stringify({
+                          type: data.event,
+                          sessionId: session,
+                          data: data
+                        }));
+                      }
+                    } catch (error) {
+                      console.log(`Error sending event to client: ${error.message}`);
+                      //this.logger.error(`Error sending event to client: ${error.message}`);
+                    }
+                  },
+                  error: (error) => {
+                    //this.logger.error(`Session event subscription error: ${error.message}`);
+                    console.log(`Session event subscription error: ${error.message}`);
+                  }
+                });
 
     //await this.initializeOrReuseSession(socket, "phone-123");
 
@@ -173,6 +199,11 @@ export class PluginWaServer extends Plugin {
           case 'start-session':           
               console.log('start-session event:', sessionId);
               socket.send(JSON.stringify({ type: 'ready', message: 'WhatsApp session is ready!' }));
+            
+              
+
+
+
             break;
 
           case 'logout':
@@ -222,7 +253,7 @@ export class PluginWaServer extends Plugin {
 
       socket.on('close', () => {
         console.log('WebSocket client disconnected');
-        //sub.unsubscribe();
+        subscription.unsubscribe();
         // this.sessionManager.stop("default", true);
         socket.removeListener('message', messageHandler);
       });
@@ -755,88 +786,60 @@ export class PluginWaServer extends Plugin {
       return;
     }
 
-    const { type, content, replyTo } = messageData;
+    const { type, content, caption, fileName, mimetype,reply_to } = messageData;
 
-    switch (type) {
+    try {
+      let result;
+      switch (type) {
         case 'text':
-
-          try {
-            const result = await client.sendText({
+          result = await client.sendText({
               chatId,
               text:content
             });
-            const message = await client.toWAMessage(result);
-            console.log("send message here",message);
-            
-        socket.send(JSON.stringify({ type: 'message-sent', chatId, message }));
-
-          } catch (error) {
-            console.log("error in sending message",error.message);
+         result = await client.toWAMessage(result);            
+        break;
+        case 'image':
+          result = await client.sendImage({
+            chatId,
+            file: {
+              data: content,
+              mimetype: mimetype
+            },
+            caption: caption
+          });
+        break;
+      case 'video':
+        result = await client.sendVideo({
+          chatId,
+          file: {
+            data: content,
+            mimetype: mimetype
+          },
+          caption: caption
+        });
+        break;
+      case 'document':
+        result = await client.sendFile({
+          chatId,
+          file: {
+            data: content,
+            mimetype: mimetype,
+            name: fileName
           }
-          // await api.resource('wachat').sendText({
-          //   session: sessionId,
-          //   chatId: selectedChatId,
-          //   text: content
-          // });
-           break;
-          
-        // case 'image':
-        //   await api.resource('wachat').sendImage({
-        //     session: sessionId,
-        //     chatId: selectedChatId,
-        //     file: content,
-        //     caption: messageData.caption
-        //   });
-        //   break;
-          
-        // case 'video':
-        //   await api.resource('wachat').sendVideo({
-        //     session: sessionId,
-        //     chatId: selectedChatId,
-        //     file: content,
-        //     caption: messageData.caption
-        //   });
-        //   break;
-          
-        // case 'file':
-        //   await api.resource('wachat').sendFile({
-        //     session: sessionId,
-        //     chatId: selectedChatId,
-        //     file: content
-        //   });
-        //   break;
+        });
+        break;
       }
+      console.log("result-sent data here",result);
+      socket.send(JSON.stringify({ type: 'message-sent', chatId, message:result }));
+    } catch (error) {
+      console.trace(error);
+      console.error("Error sending message:", error.message);
+      socket.send(JSON.stringify({ 
+        type: 'error', 
+        message: 'Failed to send message' 
+      }));
+    }
 
-
-
-    // let message;
-    // try {
-    //   let options: any = {};
-    //   if (content.replyTo) {
-    //     const quotedMessage = await client.getMessageById(content.replyTo._serialized);
-    //     if (quotedMessage) {
-    //       options.quotedMessageId = quotedMessage.id._serialized;
-    //     }
-    //   }
-    //   if (content.type === 'text') {
-    //     message = await client.sendMessage(chatId, content.content, options);
-    //   } else if (content.type === 'media') {
-    //     // Handle media message
-    //     const media = new MessageMedia(content.media.mimetype, content.content, content.media.filename);
-    //     message = await client.sendMessage(chatId, media, { caption: content.media.caption || '', ...options });
-    //   } else {
-    //     message = await client.sendMessage(chatId, content.content, options);
-    //     console.log("Sent other message", message);
-    //   }
-
-    //   socket.send(JSON.stringify({ type: 'message-sent', chatId, message }));
-    // } catch (error) {
-    //   console.error('Error sending message:', error);
-    //   socket.send(JSON.stringify({
-    //     type: 'error',
-    //     message: 'Error sending message.',
-    //   }));
-    // }
   }
 
   async install() {}

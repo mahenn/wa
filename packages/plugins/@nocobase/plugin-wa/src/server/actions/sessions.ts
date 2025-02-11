@@ -52,9 +52,9 @@ class SessionController {
   }
 
   async create(ctx: Context, next: Next) {
-    const request = ctx.request.body as SessionCreateRequest;
-    const name = request.name || generatePrefixedId('session');
-
+    const request = ctx.query || ctx.action.params as SessionCreateRequest;
+    const name = request.name || generatePrefixedId('session');//@mahen
+    console.log("posts data ",ctx.query,ctx.action.params);
     try {
       await this.withLock(name, async () => {
         if (await ctx.app.sessionManager.exists(name)) {
@@ -78,7 +78,7 @@ class SessionController {
   async update(ctx: Context, next: Next) {
     const { session = WHATSAPP_DEFAULT_SESSION_NAME } = ctx.action.params;
     const request = ctx.request.body as SessionUpdateRequest;
-    console.log(request);
+    console.log(request, ctx.query);
     try {
       await this.withLock(session, async () => {
         if (!(await ctx.app.sessionManager.exists(session))) {

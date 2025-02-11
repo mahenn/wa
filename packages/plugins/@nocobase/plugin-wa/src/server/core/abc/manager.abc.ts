@@ -82,10 +82,26 @@ export abstract class SessionManager  {
 
   public getSessionEvents(
     session: string,
-    events: WAHAEvents[],
+    events: WAHAEvents[] | '*',
   ): Observable<any> {
+    // return merge(
+    //   ...events.map((event) => this.getSessionEvent(session, event)),
+    // );
+
+    if (events === '*') {
+      // If '*' is passed, use all available events
+      return merge(
+        ...Object.values(WAHAEvents).map(event => this.getSessionEvent(session, event))
+      );
+    }
+    
+    // Otherwise use the provided array of events
+    if (!Array.isArray(events)) {
+      throw new Error('Events must be an array or "*"');
+    }
+    
     return merge(
-      ...events.map((event) => this.getSessionEvent(session, event)),
+      ...events.map(event => this.getSessionEvent(session, event))
     );
   }
 

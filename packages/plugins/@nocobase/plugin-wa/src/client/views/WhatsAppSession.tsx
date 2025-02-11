@@ -44,7 +44,6 @@ const WhatsAppSession: React.FC = () => {
 
   const sessionId = 'default';
 
-
   const loadMessages = useCallback((chatId: string, offset = 0) => {
     return new Promise<void>((resolve, reject) => {
       if (!chatId) {
@@ -73,8 +72,6 @@ const WhatsAppSession: React.FC = () => {
       console.error('Error loading more messages:', error);
     }
   }, [selectedChatId, page, isLoadingMore, loadMessages]);
-
-
 
 
   const sendMessage = useCallback((chatId: string, messageContent: any) => {
@@ -121,9 +118,11 @@ const WhatsAppSession: React.FC = () => {
     });
   });
 
+  console.log("updateChatsWithNewMessage is here",chatId, selectedChatId)
   // Update chat messages if this is the selected chat
   if (chatId === selectedChatId) {
     setChatMessages((prevMessages) => {
+      console.log("updateChatsWithNewMessage is here",prevMessages, message)
       // Check if message already exists to avoid duplicates
       const messageExists = prevMessages.some(msg => msg.id === message.id);
       if (messageExists) {
@@ -199,8 +198,8 @@ const WhatsAppSession: React.FC = () => {
           updateChatsWithNewMessage(data.message.from, data.message);
           break;
         case 'message-sent':
-          console.log('Message sent:', data);
-          updateChatsWithNewMessage(data.to, data);
+          console.log('Message sent:', data.message);
+          updateChatsWithNewMessage(data.message.from, data.message);
           break;
         case 'messages':
           console.log('Loaded messages:', data.chatId ,selectedChatId);

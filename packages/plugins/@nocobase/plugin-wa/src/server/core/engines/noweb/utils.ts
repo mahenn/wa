@@ -83,11 +83,12 @@ export function ensureNumber(value: number): number {
     // @ts-ignore
     return value;
   }
-  return typeof value === 'number' ? value : value;//toNumber(value); @mahen
+  return typeof value === 'number' ? value : toNumber(value); 
 }
 
 const toNumber = (longValue: Long): number => {
   const { low, high, unsigned } = longValue;
-  const result = unsigned ? low >>> 0 : low + high * 0x100000000;
+  //const result = unsigned ? low >>> 0 : low + high * 0x100000000;
+  const result = low ? (unsigned ? low >>> 0 : low + high * 0x100000000): longValue; // mahen
   return result;
 };

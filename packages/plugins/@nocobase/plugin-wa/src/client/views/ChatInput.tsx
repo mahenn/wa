@@ -30,17 +30,15 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, replyToMessage, on
           const result = e.target?.result as string;
           const base64Data = result.split(',')[1]; // Ensure correct Base64 encoding without prefix
           try {
-            window.atob(base64Data); // Check if Base64 string is valid
+            //window.atob(base64Data); // Check if Base64 string is valid
             // Send both message text and media file in one payload
             onSendMessage({ 
-              type: 'media', 
-              content: base64Data, 
-              media: { 
-                mimetype: uploadedFile.type, 
-                filename: uploadedFile.name, 
-                caption: message || '', 
-                replyTo: replyToMessage ? replyToMessage.id : null, // Add reply-to message ID
-              } 
+              type: getMediaType(uploadedFile.type),
+              content: base64Data,
+              caption: message,
+              fileName: uploadedFile.name,
+              mimetype: uploadedFile.type,
+              replyTo: replyToMessage?.id
             });
             setMessage(''); 
             setUploadedFile(null);
@@ -65,9 +63,19 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, replyToMessage, on
       message.error('Failed to send message');
     }
   };
- 
+  
+  const getMediaType = (mimeType: string): string => {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    return 'document';
+  };
 
   const handleUpload = (file) => {
+    const maxSize = 16 * 1024 * 1024; // 16MB limit
+    if (file.size > maxSize) {
+      message.error('File size cannot exceed 16MB');
+      return false;
+    }
     setUploadedFile(file); // Store the uploaded file
     return false; // Prevent the automatic upload
   };

@@ -79,7 +79,7 @@ import { exclude } from '../../../utils/reactive/ops/exclude';
 
 import { SingleDelayedJobRunner } from '../../../utils/SingleDelayedJobRunner';
 import { SinglePeriodicJobRunner } from '../../../utils/SinglePeriodicJobRunner';
-import * as Buffer from 'buffer';
+import {Buffer} from 'buffer';
 import { Agent } from 'https';
 import * as lodash from 'lodash';
 import * as NodeCache from 'node-cache';
@@ -194,6 +194,8 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
   private START_ATTEMPT_DELAY_SECONDS = 5;
   //private AUTO_RESTART_AFTER_SECONDS = 28 * 60;
   private AUTO_RESTART_AFTER_SECONDS =  60;
+  private MAX_CONNECTION_LISTENERS = 100; // Increase max 2000 if needed
+
 
   engine = WAHAEngine.NOWEB;
   authFactory = new NowebAuthFactoryCore();
@@ -310,10 +312,28 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     }
     const { state, saveCreds } = this.authNOWEBStore;
     const agent = this.makeAgent();
-    const socketConfig: SocketConfig = this.getSocketConfig(
-      agent,
-      state,
-    ) as SocketConfig;
+    // const socketConfig: SocketConfig = this.getSocketConfig(
+    //   agent,
+    //   state,
+    // ) as SocketConfig;
+    const socketConfig = {
+      ...this.getSocketConfig(agent, state),
+      retryRequestDelayMs: 2000,
+      connectTimeoutMs: this.CONNECTION_TIMEOUT,
+      defaultQueryTimeoutMs: 60000, // Increase default query timeout
+      maxRetries: 3,
+      patchMessageBeforeSending: (message) => {
+        const requiresPatch = !!(
+          message.buttonsMessage 
+          || message.templateMessage
+          || message.listMessage
+        );
+        if (requiresPatch) {
+          message = { viewOnceMessage: { message: { messageContextInfo: { deviceListMetadataVersion: 2, deviceListMetadata: {} }, ...message } } };
+        }
+        return message;
+      }
+    };
 
     const sock = makeWASocket(socketConfig);
     sock.ev.on('creds.update', saveCreds);
@@ -451,16 +471,21 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
 
   protected listenConnectionEvents() {
     this.logger.debug(`Start listening ${BaileysEvents.CONNECTION_UPDATE}...`);
+
+    // Set max listeners for the event emitter
+    //this.sock.ev.setMaxListeners(this.MAX_CONNECTION_LISTENERS);
+
     this.sock.ev.on('connection.update', async (update) => {
+    
       const { connection, lastDisconnect, qr, isNewLogin } = update;
 
 
-    //if (lastDisconnect?.error?.message === 'Timed Out' || lastDisconnect?.error?.message === 'Request Time-out') {
-    if (this.isConnectionError(lastDisconnect?.error)) {
-      this.logger.warn('Connection timed out, attempting restart...');
-      this.restartClient();
-      return;
-    }
+      //if (lastDisconnect?.error?.message === 'Timed Out' || lastDisconnect?.error?.message === 'Request Time-out') {
+      if (this.isConnectionError(lastDisconnect?.error)) {
+        this.logger.warn('Connection timed out, attempting restart...');
+        this.restartClient();
+        return;
+      }
 
     // if (lastDisconnect?.error?.output?.statusCode === DisconnectReason.connectionClosed)
     // {
@@ -627,6 +652,9 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     // wait until connection is not connecting to avoid error:
     // "WebSocket was closed before the connection was established"
     await waitUntil(async () => !this.sock?.ws?.isConnecting, 1_000, 10_000);
+    // Cleanup listeners
+    this.sock?.ev?.removeAllListeners();
+    this.sock?.ws?.removeAllListeners();
     this.sock?.end(undefined);
   }
 
@@ -650,6 +678,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
    * Auth methods
    */
   public getQR(): QR {
+    console.log("qrcode is here",this.qr);
     return this.qr;
   }
 
@@ -782,12 +811,74 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     return await this.sock.sendMessage(request.chatId, message, options);
   }
 
-  sendImage(request: MessageImageRequest) {
-    throw new AvailableInPlusVersion();
+  async sendImage(request: MessageImageRequest) {
+    const chatId = toJID(this.ensureSuffix(request.chatId));
+    let media;
+
+    if('data' in request.file) {
+      // Handle base64 data
+      media = {
+        image: Buffer.from(request.file.data, 'base64'),
+        caption: request.caption,
+        mimetype: request.file.mimetype
+      };
+    } else if ('url' in request.file) {
+      // Handle URL
+      media = {
+        image: { url: request.file.url },
+        caption: request.caption
+      };
+    }
+
+    const options = await this.getMessageOptions(request);
+    const result = await this.sock.sendMessage(chatId, media, options);
+    return this.processIncomingMessage(result);
+    //return this.toWAMessage(result);
+  } 
+
+
+  async sendVideo(request: MessageFileRequest) {
+    const chatId = toJID(this.ensureSuffix(request.chatId));
+    let media;
+
+    if ('data' in request.file) {
+      media = {
+        video: Buffer.from(request.file.data, 'base64'),
+        caption: request.caption,
+        mimetype: request.file.mimetype
+      };
+    } else if ('url' in request.file) {
+      media = {
+        video: { url: request.file.url },
+        caption: request.caption
+      };
+    }
+
+    const options = await this.getMessageOptions(request);
+    const result = await this.sock.sendMessage(chatId, media, options);
+    return this.processIncomingMessage(result);
   }
 
-  sendFile(request: MessageFileRequest) {
-    throw new AvailableInPlusVersion();
+  async sendFile(request: MessageFileRequest) {
+    const chatId = toJID(this.ensureSuffix(request.chatId));
+    let media;
+
+    if ('data' in request.file) {
+      media = {
+        document: Buffer.from(request.file.data, 'base64'),
+        mimetype: request.file.mimetype,
+        fileName: request.file.name
+      };
+    } else if ('url' in request.file) {
+      media = {
+        document: { url: request.file.url },
+        fileName: request.file.name
+      };
+    }
+
+    const options = await this.getMessageOptions(request);
+    const result = await this.sock.sendMessage(chatId, media, options);
+    return this.processIncomingMessage(result);
   }
 
   sendVoice(request: MessageVoiceRequest) {
@@ -1722,8 +1813,7 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
 
   protected toWAMessage(message): Promise<WAMessage> {
 
-    //console.log("toWAmessage" ,message);
-
+    //console.log("toWAmessage here " ,message);
     const fromToParticipant = getFromToParticipant(message);
     const id = buildMessageId(message.key);
     const body = this.extractBody(message.message);
@@ -2191,7 +2281,7 @@ function getFromToParticipant(message) {
     participant = message.key.participant;
     to = message.key.remoteJid;
   }
-  const from = message.key.remoteJid;
+  const from = message.key?.remoteJid;
   return {
     from: from,
     to: to,
