@@ -116,7 +116,7 @@ const WhatsAppClone: React.FC<WhatsAppCloneProps> = ({
                       sessionId={sessionId}
                       loading={isLoadingMore} 
                     />
-                    <Footer style={{ padding: '10px', background: '#f0f0f0' }}>
+                    <Footer style={{ padding: '10px', background: '#f0f0f0' , width: '70%' }}>
                       <ChatInput
                         onSendMessage={(msg) => sendMessage(selectedChatId, msg)}
                         replyToMessage={replyToMessage} // Pass replyToMessage to ChatInput

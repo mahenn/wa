@@ -165,7 +165,6 @@ const WhatsAppSession: React.FC = () => {
 
       switch (data.type) {
         case 'qr':
-
           setLoading(false);
           setQrCode(data.qr);
           setIsReady(false);
@@ -194,7 +193,8 @@ const WhatsAppSession: React.FC = () => {
         case 'new-message':
         case 'new-media-message':
         case 'message-reacted':
-          console.log('New message received:', data.message);
+        case 'message.any':
+          console.log('New message received:', data);
           updateChatsWithNewMessage(data.message.from, data.message);
           break;
         case 'message-sent':

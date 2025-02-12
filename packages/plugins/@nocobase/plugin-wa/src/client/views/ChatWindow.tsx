@@ -11,7 +11,7 @@ import { WAMessageAck } from '../../server/structures/enums.dto';
 const { Text } = Typography;
 
 const chatWindowStyles = css`
-  height: calc(100vh - 150px);
+  height: calc(100vh - 50px);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
@@ -189,8 +189,6 @@ const chatWindowStyles = css`
 
 `;
 
-
-
 interface ReplyToMessage {
   id: string;
   fromMe: boolean;
@@ -202,7 +200,6 @@ interface ReplyToMessage {
     url?: string;
   };
 }
-
 
 interface ChatWindowProps {
   chatMessages: any[];
@@ -596,7 +593,7 @@ const ChatWindow: React.FC<ChatWindowProps> = ({
                
                 <div className="message-meta">
                   {moment(message.timestamp * 1000).format('HH:mm')}&nbsp;&nbsp;
-                  {message.fromMe && <MessageTicks ack={message.ack} />}
+                  {<MessageTicks ack={message.ack} /> } {message.ack}
                 </div>
                 {message._data.reactions && renderReactions(message._data.reactions)}
               </div>

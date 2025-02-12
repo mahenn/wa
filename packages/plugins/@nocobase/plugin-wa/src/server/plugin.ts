@@ -36,6 +36,7 @@ import {
 } from './structures/chats.dto';
 
 import { resolve } from 'path';
+import path from 'path';
 
 export class PluginWaServer extends Plugin {
   private sessionManager: SessionManagerCore;
@@ -48,6 +49,23 @@ export class PluginWaServer extends Plugin {
   async afterAdd() {}
 
   async beforeLoad() {
+
+    await this.db.sync();
+
+    await this.db.import({
+      directory: path.resolve(__dirname, 'collections'),
+    });
+
+    const repo = this.db.getRepository<any>('collections');
+    
+    if (repo) {
+      await repo.db2cm('wa_chats');
+      await repo.db2cm('wa_messages');
+      await repo.db2cm('wa_contacts');
+      await repo.db2cm('wa_labels');
+      await repo.db2cm('wa_label_associations');
+      await repo.db2cm('wa_groups');
+    }
   }
 
   async load() {
@@ -64,8 +82,8 @@ export class PluginWaServer extends Plugin {
         name: 'WhatsAppPlugin'
       }
     });
-    logger.setContext('WhatsAppPlugin'); // Set context before passing to SessionManager
 
+    logger.setContext('WhatsAppPlugin'); // Set context before passing to SessionManager
 
     // this.app.db.registerRepositories({
     //    'wa_chats': WaChatRepository
@@ -84,8 +102,6 @@ export class PluginWaServer extends Plugin {
     
     // Initialize Media Storage Factory
     const mediaStorageFactory = new MediaLocalStorageFactory(mediaLocalStorageConfig);
-
-
 
     this.sessionManager = new SessionManagerCore(this.configService,
                                                   this.engineConfig,
@@ -117,7 +133,6 @@ export class PluginWaServer extends Plugin {
     //   await this.sessionManager.beforeApplicationShutdown();
     // });
 
-
     const gateway = Gateway.getInstance();
 
     // @ts-expect-error
@@ -129,12 +144,10 @@ export class PluginWaServer extends Plugin {
     // @ts-expect-error
     const wsServer = gateway.wsServer.wss;
 
-
     wsServer.on('connection', async (socket) => {
     // gateway.on('ws:connection', async (socket: WebSocket) => {
 
     console.log('Client connected to WebSocket');
-
 
     // const sub = this.sessionManager.getSessionEvents("default", '*')
     //   .subscribe((data) => {
@@ -148,30 +161,30 @@ export class PluginWaServer extends Plugin {
     //   });
 
     // Subscribe to session events using sessionManager
-              const subscription = this.app.sessionManager
-                .getSessionEvents(session, events)
-                .subscribe({
-                  next: (data) => {
-                    try {
-                      //this.logger.debug(`Sending event to client, event.id: ${data.id}`, data);
-                      console.log(`Sending event to client, event.id: ${data.id}`, data);
-                      if (socket.readyState === WebSocket.OPEN) {
-                        socket.send(JSON.stringify({
-                          type: data.event,
-                          sessionId: session,
-                          data: data
-                        }));
-                      }
-                    } catch (error) {
-                      console.log(`Error sending event to client: ${error.message}`);
-                      //this.logger.error(`Error sending event to client: ${error.message}`);
-                    }
-                  },
-                  error: (error) => {
-                    //this.logger.error(`Session event subscription error: ${error.message}`);
-                    console.log(`Session event subscription error: ${error.message}`);
-                  }
-                });
+    const subscription = this.app.sessionManager
+      .getSessionEvents(session, events)
+      .subscribe({
+        next: (data) => {
+          try {
+            //this.logger.debug(`Sending event to client, event.id: ${data.id}`, data);
+            console.log(`Sending event to client, event.id: ${data.id}`, data.event,data.payload);
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send(JSON.stringify({
+                type: data.event,
+                sessionId: session,
+                message: data.payload
+              }));
+            }
+          } catch (error) {
+            console.log(`Error sending event to client: ${error.message}`);
+            //this.logger.error(`Error sending event to client: ${error.message}`);
+          }
+        },
+        error: (error) => {
+          //this.logger.error(`Session event subscription error: ${error.message}`);
+          console.log(`Session event subscription error: ${error.message}`);
+        }
+      });
 
     //await this.initializeOrReuseSession(socket, "phone-123");
 
@@ -199,11 +212,6 @@ export class PluginWaServer extends Plugin {
           case 'start-session':           
               console.log('start-session event:', sessionId);
               socket.send(JSON.stringify({ type: 'ready', message: 'WhatsApp session is ready!' }));
-            
-              
-
-
-
             break;
 
           case 'logout':
@@ -217,7 +225,7 @@ export class PluginWaServer extends Plugin {
 
           case 'send-message':
           //  console.log(`Send message event received for session: ${sessionId}`);
-            //await this.sendChat(socket, chatId, content, sessionId);
+            await this.sendChat(socket, chatId, content, sessionId);
             break;
 
           case 'new-message':

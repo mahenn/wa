@@ -49,15 +49,46 @@ const WhatsAppSessionManager: React.FC = () => {
 
         switch (data.type) {
           case 'engine.event':
-            if (data.data.payload?.data?.qr) {
+            if (data?.message?.data.qr) {
               try {
-                const dataUrl = await QRCode.toDataURL(data.data.payload.data.qr); // Fix: Convert to base64
+                const dataUrl = await QRCode.toDataURL(data.message.data.qr); // Fix: Convert to base64
                 setQrCode(dataUrl);
                 setQrModalVisible(true);
               } catch (error) {
                 console.error('QR Code Generation Error:', error);
                 message.error('Failed to generate QR code');
               }
+            }
+            break;
+           // Add session status update handling
+          case 'session.status':
+            console.log('Session status update:', data);
+            // Update sessions list to reflect new status
+            fetchSessions();
+            
+            // If status is WORKING, close QR modal as authentication is successful
+            if (data.data?.status === 'WORKING') {
+              setQrModalVisible(false);
+              message.success('WhatsApp connected successfully');
+            }
+            
+            // Handle other status changes
+            switch (data.data?.status) {
+              case 'STARTING':
+                message.info('Session is starting...');
+                break;
+              case 'SCAN_QR_CODE':
+                message.info('Please scan the QR code');
+                setQrModalVisible(true);
+                break;
+              case 'FAILED':
+                message.error('Session failed to start');
+                setQrModalVisible(false);
+                break;
+              case 'STOPPED':
+                message.warning('Session stopped');
+                setQrModalVisible(false);
+                break;
             }
             break;
           case 'ready':
@@ -183,7 +214,9 @@ const WhatsAppSessionManager: React.FC = () => {
         <span style={{ 
           color: status === 'WORKING' ? '#52c41a' : 
                  status === 'STARTING' ? '#faad14' : 
-                 status === 'STOPPED' ? '#ff4d4f' : '#8c8c8c'
+                 status === 'SCAN_QR_CODE' ? '#1890ff' :
+                 status === 'FAILED' ? '#ff4d4f' : 
+                 status === 'STOPPED' ? '#d9d9d9' : '#8c8c8c'
         }}>
           {status}
         </span>
@@ -236,7 +269,7 @@ const WhatsAppSessionManager: React.FC = () => {
 
   const handleCreateSession = async (values) => {
     await createSession({
-      data: {
+   
         name: values.name || "default",
         start: true,
         config: {
@@ -248,7 +281,6 @@ const WhatsAppSessionManager: React.FC = () => {
             }
           }
         }
-      }
       }
     );
   };

@@ -198,8 +198,10 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
 
 
   engine = WAHAEngine.NOWEB;
-  authFactory = new NowebAuthFactoryCore();
-  storageFactory = new NowebStorageFactoryCore();
+  //authFactory = new NowebAuthFactoryCore();
+  //storageFactory = new NowebStorageFactoryCore();
+  private readonly authFactory: NowebAuthFactoryCore;
+  private readonly storageFactory: NowebStorageFactoryCore;
   private startDelayedJob: SingleDelayedJobRunner;
   private shouldRestart: boolean;
   private autoRestartJob: SinglePeriodicJobRunner;
@@ -220,11 +222,13 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
     // external map to store retry counts of messages when decryption/encryption fails
     // keep this out of the socket itself, to prevent a message decryption/encryption loop across socket restarts
     // this.msgRetryCounterCache = 
-    //new NodeCache({
+    // new (NodeCache as any)({
     //   stdTTL: 60 * 60, // 1 hour
     //   useClones: false,
     // });
 
+    this.authFactory = new NowebAuthFactoryCore();
+    this.storageFactory = new NowebStorageFactoryCore();
     this.engineLogger = this.loggerBuilder.child({
       name: 'NOWEBEngine',
     }) as unknown as BaileysLogger;
@@ -243,6 +247,10 @@ export class WhatsappSessionNoWebCore extends WhatsappSession {
       'auto-restart',
       delay * SECOND,
       this.logger,
+      async () => {
+        this.logger.info('Auto-restarting the client connection...');
+        await this.sock?.end();
+      },
     );
     this.authNOWEBStore = null;
   }

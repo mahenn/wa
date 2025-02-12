@@ -330,7 +330,7 @@ export class SessionManagerCore extends SessionManager {
   }
 
   async getSessions(all: boolean): Promise<SessionInfo[]> {
-    if (this.session === DefaultSessionStatus.STOPPED && all) {
+    if (this.session === DefaultSessionStatus.STOPPED ) { //&& all @mahen
       return [
         {
           name: this.DEFAULT,

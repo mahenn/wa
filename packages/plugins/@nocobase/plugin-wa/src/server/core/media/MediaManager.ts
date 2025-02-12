@@ -17,7 +17,7 @@ const promiseRetry = require('promise-retry');
 export class MediaManager implements IMediaManager {
   // https://github.com/IndigoUnited/node-promise-retry
   RETRY_OPTIONS = {
-    retries: 5,
+    retries: 1,
     minTimeout: 100,
     maxTimeout: 500,
   };

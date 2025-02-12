@@ -1,35 +1,86 @@
-// server/collections/wa.groups.ts
-export default {
+import { defineCollection } from '@nocobase/database';
+
+export default defineCollection({
+  origin: '@nocobase/plugin-wa',
   name: 'wa_groups',
+  title: '{{t("WhatsApp Groups")}}',
   fields: [
     {
-      type: 'string',
       name: 'id',
-      primaryKey: true
+      type: 'string',
+      primaryKey: true,
+      uiSchema: {
+        type: 'string',
+        title: '{{t("Group ID")}}',
+        'x-component': 'Input',
+        'x-read-pretty': true
+      }
     },
     {
+      interface: 'json',
       type: 'json',
-      name: 'data'
+      name: 'data',
+      uiSchema: {
+        type: 'json',
+        title: '{{t("Group Data")}}',
+        'x-component': 'Input.JSON',
+        'x-read-pretty': true
+      }
     },
     {
+      interface: 'input',
       type: 'string',
-      name: 'subject'
+      name: 'subject',
+      uiSchema: {
+        type: 'string',
+        title: '{{t("Group Name")}}',
+        'x-component': 'Input',
+        'x-read-pretty': true
+      }
     },
     {
+      interface: 'json',
       type: 'json',
-      name: 'participants'
+      name: 'participants',
+      uiSchema: {
+        type: 'json',
+        title: '{{t("Participants")}}',
+        'x-component': 'Input.JSON',
+        'x-read-pretty': true
+      }
     },
     {
+      interface: 'input',
       type: 'string',
-      name: 'owner'
+      name: 'owner',
+      uiSchema: {
+        type: 'string',
+        title: '{{t("Owner")}}',
+        'x-component': 'Input',
+        'x-read-pretty': true
+      }
     },
     {
+      interface: 'textarea',
       type: 'string',
-      name: 'desc'
+      name: 'desc',
+      uiSchema: {
+        type: 'string',
+        title: '{{t("Description")}}',
+        'x-component': 'Input.TextArea',
+        'x-read-pretty': true
+      }
     },
     {
+      interface: 'integer',
       type: 'integer',
-      name: 'size'
+      name: 'size',
+      uiSchema: {
+        type: 'number',
+        title: '{{t("Size")}}',
+        'x-component': 'InputNumber',
+        'x-read-pretty': true
+      }
     }
   ]
-};
+});
